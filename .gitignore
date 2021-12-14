@@ -56,3 +56,4 @@ venv.bak/
 *.exe
 *.xlsx
 *.xlsm
+temporary.py

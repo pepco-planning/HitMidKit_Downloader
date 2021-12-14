@@ -1,4 +1,4 @@
-def inventory(startWeek,endWeek,dep):
+def inventory(startWeek,endWeek,currentWeek,dep):
     dep_name = '"' + dep + '"'
     return """
             DEFINE
@@ -8,6 +8,11 @@ def inventory(startWeek,endWeek,dep):
                     'Planning Calendar PCAL'[PCAL_WEEK_KEY]>= """ + str(startWeek) + """
                     &&
                     'Planning Calendar PCAL'[PCAL_WEEK_KEY]<=""" + str(endWeek) + """)
+            
+            var pcal2 = 
+                filter(
+                    values('Planning Calendar PCAL'[PCAL_WEEK_KEY]),
+                        'Planning Calendar PCAL'[PCAL_WEEK_KEY]=""" + str(currentWeek) + """)
             
             var 
             StartWk =
@@ -66,6 +71,7 @@ def inventory(startWeek,endWeek,dep):
                 'Planning Calendar PCAL'[Pl Week],
                 skufin,
                 pcal,
+                pcal2,
                 str2,
                 "SalesU",[Sales Qty dsale],
                 "SalesV",[Sales Retail Report dsale],

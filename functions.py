@@ -1,10 +1,24 @@
 import daxDownloader as td
 
 def runDaxQueries(startWeek,endWeek,dep,dax_query_list,path):
+    """
+    NOT USED!
+    :param startWeek:
+    :param endWeek:
+    :param dep:
+    :param dax_query_list:
+    :param path:
+    :return:
+    """
     for query in dax_query_list:
         df = td.dataFrameFromTabular(query(startWeek, endWeek, dep))
         q_name = query.__name__ + '.csv'
         df.to_csv(path + q_name, index=False)
+
+def runDaxQuery(startWeek,endWeek,dep,dax_query,path):
+    df = td.dataFrameFromTabular(dax_query(startWeek, endWeek, dep))
+    q_name = dax_query.__name__ + '.csv'
+    df.to_csv(path + q_name, index=False)
 
 departments = ['a Baby Girls Outerwear', 'b Baby Boys Outerwear', 'c Baby Girls Basics', 'd Baby Boys Basics',
                'e Younger Girls Outerwear', 'f Younger Boys Outerwear', 'g Older Girls Outerwear',
@@ -44,3 +58,17 @@ def weeksCalculation(startWeek, endWeek, maxWeekNo):
         list_of_weeks.append(week)
         #print(week)
     return list_of_weeks
+
+def xw_func():
+    #A Function in xlwings (we can create own function there
+    # def xw_func() DO NOT EXIST. I have created it just to make it easier to collapse
+    @xw.func
+    def hello(name):
+        return f"Hi {name}!"
+
+    if __name__ == "__main__":
+        xw.Book("hitmidkit.xlsm").set_mock_caller()
+        main()
+
+def new():
+    pass
