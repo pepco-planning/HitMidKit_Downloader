@@ -1,6 +1,5 @@
 import functions as f
 
-
 def refreshBI():
     dep, startWeek, endWeek, path = f.getExcelData()
 

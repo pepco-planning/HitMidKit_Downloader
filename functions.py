@@ -6,24 +6,8 @@ import pandas as pd
 import os
 import time
 
-# ws_chosenDept, ws_chosenTable, ws_chosenWeek, ws_status = "C20", "C21", "C22", "C23" # '"' + ws_chosenTable + '"'
-# wCD = '"' + ws_chosenDept + '"'
-# wCT = '"' + ws_chosenTable + '"'
-# wCW = '"' + ws_chosenWeek + '"'
-# wS = '"' + ws_status + '"'
-
 dax_query_list = [daxQ.grading,daxQ.sku_plu,daxQ.md,daxQ.plu_available,
                      daxQ.promo_reg,daxQ.promo_tv,daxQ.prh_data,daxQ.perf_dep,daxQ.pcal,daxQ.prh]
-
-departments = ['a Baby Girls Outerwear', 'b Baby Boys Outerwear', 'c Baby Girls Basics', 'd Baby Boys Basics',
-               'e Younger Girls Outerwear', 'f Younger Boys Outerwear', 'g Older Girls Outerwear',
-               'h Older Boys Outerwear', 'i Ladies Outerwear', 'j Mens Outerwear', 'a Girls Basics',
-               'b Boys Basics', 'c Ladies Basics', 'd Mens Basics', 'e Kids Nightwear', 'f Adult Nightwear',
-               'a Accessories', 'b Baby Accessories', 'a Kids Footwear', 'b Adult Footwear', 'a Kitchenware Cooking',
-               'b Dining Room', 'c Bathroom', 'd Living Room', 'e Home Deco', 'f Home Tex', 'g Utility', 'a Toys',
-               'a Gardening', 'b Tourism', 'c Luggage', 'd Easter', 'e Gravelights', 'f Christmas Decorations', 'g Halloween',
-               'a House Electrics', 'b Stationery', 'c Festive Accessories', 'd Pet'
-]
 
 def runDaxQueries(startWeek,endWeek,dep,dax_query_list,path):
 
@@ -139,53 +123,3 @@ def getExcelData():
     endWeek = ws["T4"].value
     path = ws["C5"].value + "\\"
     return dep, startWeek,endWeek, path
-
-def tempProcessFile(path,y_n):
-    if y_n == 1:
-        if os.path.exists(path + "Ready.txt"):
-            os.remove(path + "Ready.txt")
-
-        file = open(path + "Not Ready.txt", "w")
-        file.write("Data are still downloading...")
-        time.sleep(5)
-        file.close()
-    else:
-        if os.path.exists(path + "Not Ready.txt"):
-            os.remove(path + "Not Ready.txt")
-
-        file = open(path + "Ready.txt", "w")
-        file.write("Data have been downloaded")
-        time.sleep(5)
-        file.close()
-
-def tempMacro():
-    path = "c:\Mariusz\MyProjects\HitMidKit\input data\\"
-
-
-    wb = xw.Book.caller()
-    ws = wb.sheets[0]
-    ws["G4"].value = "Y"
-
-    tempProcessFile(path,1)
-
-    ws["G6"].value = "Y"
-
-    tempProcessFile(path, 0)
-
-def run_excel_macro(file_path):
-    try:
-        xl_app = xw.App(visible=False, add_book=False)
-        wb = xl_app.books.open(file_path)
-
-        run_macro = wb.app.macro('Module1.module_name')
-        run_macro()
-
-        wb.save(file_path)
-        wb.close()
-
-        xl_app.quit()
-
-    except Exception as ex:
-        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-        message = template.format(type(ex).__name__, ex.args)
-        print(message)
