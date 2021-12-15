@@ -3,8 +3,6 @@ import daxQueries as daxQ
 import xlwings as xw
 import datetime
 import pandas as pd
-import os
-import time
 
 dax_query_list = [daxQ.grading,daxQ.sku_plu,daxQ.md,daxQ.plu_available,
                      daxQ.promo_reg,daxQ.promo_tv,daxQ.prh_data,daxQ.perf_dep,daxQ.pcal,daxQ.prh]
@@ -99,21 +97,6 @@ def weeksCalculation(startWeek, endWeek, maxWeekNo):
         list_of_weeks.append(week)
         #print(week)
     return list_of_weeks
-
-def xw_func():
-    """
-    Comments:
-    NOT USED
-        # A Function in xlwings (we can create own function there
-        # def xw_func() DO NOT EXIST. I have created it just to make it easier to collapse
-    """
-    # @xw.func
-    # def hello(name):
-    #     return f"Hi {name}!"
-    #
-    # if __name__ == "__main__":
-    #     xw.Book("hitmidkit.xlsm").set_mock_caller()
-    #     main()
 
 def getExcelData():
     wb = xw.Book.caller()

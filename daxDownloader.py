@@ -7,7 +7,7 @@
 import pandas as pd
 from sys import path
 path.append(r"dll")
-path.append("c:\Mariusz\MyProjects\HitMidKit\dll")
+path.append("c:\Mariusz\MyProjects\HitMidKit_Downloader\dll")
 from pyadomd import Pyadomd
 
 
