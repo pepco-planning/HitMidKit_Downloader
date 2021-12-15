@@ -18,8 +18,9 @@ def dataFrameFromTabular(query):
     conn.open()
     cursor = conn.cursor()
     cursor.execute(query)
+    col_names = [i[0] for i in cursor.description]
     cursor.arraysize = 5000
-    df = pd.DataFrame(cursor.fetchall())
+    df = pd.DataFrame(cursor.fetchall(), columns=col_names)
     conn.close()
 
     return df

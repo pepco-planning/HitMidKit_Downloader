@@ -76,12 +76,14 @@ def runDaxInventory(startWeek,endWeek,dep,path):
 
         df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, dep))
         inventory_df = inventory_df.append(df)
+        inventory_df.to_csv(path + "inventory.csv", index=False)
 
     inventory_df.columns = col
     inventory_df.to_csv(path + "inventory.csv", index=False)
 
     ws.range("H15").value = datetime.datetime.now()
     ws.range("K15").value = "inventory"
+    ws.range("C20:C22").clear_contents()  # clear cells with Information's table
     ws.range("C23").value = "Ready"
 
 def weeksCalculation(startWeek, endWeek, maxWeekNo):
@@ -133,8 +135,8 @@ def getExcelData():
     wb = xw.Book.caller()
     ws = wb.sheets[0]
     dep = ws["C4"].value
-    startWeek = ws["Q3"].value
-    endWeek = ws["Q4"].value
+    startWeek = ws["T3"].value
+    endWeek = ws["T4"].value
     path = ws["C5"].value + "\\"
     return dep, startWeek,endWeek, path
 
