@@ -3,6 +3,8 @@ import daxQueries as daxQ
 import xlwings as xw
 import datetime
 import pandas as pd
+import os
+from datetime import datetime, date
 
 dax_query_list = [daxQ.grading,daxQ.sku_plu,daxQ.md,daxQ.plu_available,
                      daxQ.promo_reg,daxQ.promo_tv,daxQ.prh_data,daxQ.perf_dep,daxQ.pcal,daxQ.prh]
@@ -106,3 +108,133 @@ def getExcelData():
     endWeek = ws["T4"].value
     path = ws["C5"].value + "\\"
     return dep, startWeek,endWeek, path
+
+def loadParameters():
+    dir_ = r'\\10.2.5.140\zasoby\Planowanie\PERSONAL FOLDERS\Mariusz Borycki\HitMidKit_DataBase'
+    f_name = 'HitMidKit_parameters.xlsm'
+    directory = dir_ + "\\" + f_name
+    df = pd.read_excel(directory, sheet_name='py_inputs', skiprows=1)
+    df = df[['Variables Header', 'Chosen Variables']]
+
+    df2 = pd.read_excel(directory, sheet_name='QueryPar', skiprows=1)
+    df2 = df2[['Chosen Hierarchy', 'Index']]
+
+    startWeek = int(df[df['Variables Header'] == 'Week From']['Chosen Variables'])
+    endWeek = int(df[df['Variables Header'] == 'Week To']['Chosen Variables'])
+    dep = df[df['Variables Header'] == 'Departament']['Chosen Variables'].item()
+    departmentList = list(df2['Chosen Hierarchy'].unique())
+    departmentList = [x for x in departmentList if str(x) != 'nan']
+    hierIdx = df[df['Variables Header'] == 'Hierarchy']['Chosen Variables'].item()
+    indexList = list(df2['Index'].unique())
+    indexList = [x for x in indexList if str(x) != 'nan']
+
+    path = str(df[df['Variables Header'] == 'Path']['Chosen Variables'].item()) + "\\"
+
+    if dep == 0:
+        for d in departmentList:
+            dep = departmentList
+            hierIdx = indexList
+        else:
+            dep = dep
+            hierIdx = hierIdx
+
+    return dep, startWeek, endWeek, path, hierIdx
+
+def loadInventory(startWeek,endWeek,dep,path,hierIdx):
+    showStatus(path, 1) # 1 status means: busy
+
+    if type(dep) == list:
+        for dep_index, dep_name in enumerate(dep):
+            weeksList = []
+            wList = td.dataFrameFromTabular(daxQ.pcal(startWeek, endWeek, dep_name))
+            for week in wList.iloc[:, 5]:
+                weeksList.append(week)
+            del wList
+
+            col = ['SKU PLU', 'SKU Colour', 'STR Number', 'Pl Year', 'Pl Week', 'SalesU', 'SalesV', 'SalesM', 'CSOHU', 'CSOHV']
+            inventory_df = pd.DataFrame()
+            for week in weeksList:
+                # Need it for saving informations into .log file
+                startQuery = datetime.now()
+                startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
+
+                file = open(path + "Not Ready.txt", "w")
+                file.write(f"Data are still downloading...\n\n"
+                           f"Department: {dep_name}\n"
+                           f"Hierarchy: {hierIdx[dep_index]}\n"
+                           f"Week: {week}")
+                file.close()
+
+                # print(f"\n-----\nTemporary (dep list-YES):\nStart Week: {startWeek}\nEnd Week: {endWeek}\nWeek: {week}\nDepartment: {dep_name}\nIndex: {hierIdx[dep_index]}")
+                df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, dep_name))
+                inventory_df = inventory_df.append(df)
+                inventory_df.to_csv(path + f"{hierIdx[dep_index]}_HitMidKit.csv", index=False)
+
+                endQuery = datetime.now()
+                endQuery = endQuery.strftime("%H:%M:%S")
+                saveLog(startQuery, endQuery, dep_name, hierIdx[dep_index], week, path)
+
+            inventory_df.columns = col
+            inventory_df.to_csv(path + f"{hierIdx[dep_index]}_HitMidKit.csv", index=False)
+    else:
+        weeksList = []
+        wList = td.dataFrameFromTabular(daxQ.pcal(startWeek, endWeek, dep))
+        for week in wList.iloc[:, 5]:
+            weeksList.append(week)
+        del wList
+
+        col = ['SKU PLU','SKU Colour','STR Number','Pl Year','Pl Week','SalesU','SalesV','SalesM','CSOHU','CSOHV']
+        inventory_df = pd.DataFrame()
+        for week in weeksList:
+            # Need it for saving informations into .log file
+            startQuery = datetime.now()
+            startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
+
+            file = open(path + "Not Ready.txt", "w")
+            file.write(f"Data are still downloading...\n\n"
+                       f"Department: {dep}\n"
+                       f"Hierarchy: {hierIdx}\n"
+                       f"Week: {week}")
+            file.close()
+
+            # print(f"\n-----\nTemporary (dep list-NO):\nStart Week: {startWeek}\nEnd Week: {endWeek}\nWeek: {week}\nDepartment: {dep}\nIndex: {hierIdx}")
+            df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, dep))
+            inventory_df = inventory_df.append(df)
+            inventory_df.to_csv(path + f"{hierIdx}_HitMidKit.csv", index=False)
+
+            endQuery = datetime.now()
+            endQuery = endQuery.strftime("%H:%M:%S")
+            saveLog(startQuery, endQuery, dep, hierIdx, week, path)
+
+        inventory_df.columns = col
+        inventory_df.to_csv(path + f"{hierIdx}_HitMidKit.csv", index=False)
+
+    showStatus(path, 0)  # 0 status means: NOT busy. Inventory file is ready
+
+def showStatus(path,y_n):
+    if y_n == 1:
+        if os.path.exists(path + "Ready.txt"):
+            os.remove(path + "Ready.txt")
+
+        file = open(path + "Not Ready.txt", "w")
+        file.write("Data are still downloading...")
+
+        file.close()
+    else:
+        if os.path.exists(path + "Not Ready.txt"):
+            os.remove(path + "Not Ready.txt")
+
+        file = open(path + "Ready.txt", "w")
+        file.write("Data have been downloaded")
+
+        file.close()
+
+def saveLog(startQuery, endQuery, dep, hierIdx, week, path):
+    today = date.today()
+    today = today.strftime("%d/%m/%Y")
+    queryTime = str(datetime.strptime(endQuery, "%H:%M:%S") - datetime.strptime(startQuery, "%H:%M:%S"))
+    logList = [today, dep, str(hierIdx), str(week), startQuery, endQuery, queryTime]
+
+    with open(path + 'Log_HitMidKit.log', 'a+') as log_file:
+        log_file.write("\n")
+        log_file.writelines(';'.join(logList))
