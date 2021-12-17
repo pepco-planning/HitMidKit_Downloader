@@ -5,9 +5,10 @@
 # Plików szukaj w C:\Windows\assembly\GAC_MSIL\Microsoft.AnalysisServices.(nazwa pliku)\
 
 import pandas as pd
+import os
 from sys import path
 path.append(r"dll")
-path.append("c:\Mariusz\MyProjects\HitMidKit_Downloader\dll")
+path.append(os.getcwd()+'\\dll')
 from pyadomd import Pyadomd
 
 
