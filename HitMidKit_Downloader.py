@@ -15,7 +15,7 @@ def downloadData():
     :return:
     """
 
-    dep, startWeek, endWeek, path, hierIdx = f.loadParameters()
-    f.loadInventory(startWeek,endWeek,dep,path,hierIdx)
+    dep, startWeek, endWeek, minPar, path, hierIdx = f.loadParameters()
+    f.loadInventory(startWeek,endWeek,minPar,dep,path,hierIdx)
 
 downloadData()

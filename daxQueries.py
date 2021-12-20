@@ -1,4 +1,4 @@
-def inventory(startWeek,endWeek,currentWeek,dep):
+def inventory(startWeek,endWeek,currentWeek,minPar,dep):
     dep_name = '"' + dep + '"'
     return """
             DEFINE
@@ -60,7 +60,7 @@ def inventory(startWeek,endWeek,currentWeek,dep):
                 filter(
                     SUMMARIZECOLUMNS(
                     'Products SKU'[sku plu],
-                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>2000)
+                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + str(minPar) + """)
             
             EVALUATE
             SUMMARIZECOLUMNS(

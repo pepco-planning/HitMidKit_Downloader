@@ -3,8 +3,9 @@ import daxQueries as daxQ
 import xlwings as xw
 import datetime
 import pandas as pd
+import numpy as np
 import os
-from datetime import datetime, date
+#from datetime import datetime, timedelta, date
 
 dax_query_list = [daxQ.grading,daxQ.sku_plu,daxQ.md,daxQ.plu_available,
                      daxQ.promo_reg,daxQ.promo_tv,daxQ.prh_data,daxQ.perf_dep,daxQ.pcal,daxQ.prh]
@@ -35,40 +36,40 @@ def runDaxQuery(startWeek,endWeek,dep,dax_query,path):
     q_name = dax_query.__name__ + '.csv'
     df.to_csv(path + q_name, index=False)
 
-def runDaxInventory(startWeek,endWeek,dep,path):
-    wb = xw.Book.caller()
-    ws = wb.sheets[0]
-
-    weeksList = []
-
-    wList = pd.read_csv(path + "pcal.csv")
-    for week in wList.iloc[:, 5]:
-        weeksList.append(week)
-    del wList
-
-    ws.range("C20").value = dep
-    ws.range("C21").value = "inventory"
-    ws.range("C23").value = "Not Ready"
-
-    ws.range("G15").value = datetime.datetime.now()
-    col = ['SKU PLU', 'SKU Colour', 'STR Number', 'Pl Year', 'Pl Week', 'SalesU', 'SalesV', 'SalesM', 'CSOHU', 'CSOHV']
-    inventory_df = pd.DataFrame()
-    for week in weeksList:
-        ws.range("C20").value = dep
-        ws.range("C21").value = "inventory"
-        ws.range("C22").value = week
-
-        df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, dep))
-        inventory_df = inventory_df.append(df)
-        inventory_df.to_csv(path + "inventory.csv", index=False)
-
-    inventory_df.columns = col
-    inventory_df.to_csv(path + "inventory.csv", index=False)
-
-    ws.range("H15").value = datetime.datetime.now()
-    ws.range("K15").value = "inventory"
-    ws.range("C20:C22").clear_contents()  # clear cells with Information's table
-    ws.range("C23").value = "Ready"
+# def runDaxInventory(startWeek,endWeek,dep,path):
+#     wb = xw.Book.caller()
+#     ws = wb.sheets[0]
+#
+#     weeksList = []
+#
+#     wList = pd.read_csv(path + "pcal.csv")
+#     for week in wList.iloc[:, 5]:
+#         weeksList.append(week)
+#     del wList
+#
+#     ws.range("C20").value = dep
+#     ws.range("C21").value = "inventory"
+#     ws.range("C23").value = "Not Ready"
+#
+#     ws.range("G15").value = datetime.datetime.now()
+#     col = ['SKU PLU', 'SKU Colour', 'STR Number', 'Pl Year', 'Pl Week', 'SalesU', 'SalesV', 'SalesM', 'CSOHU', 'CSOHV']
+#     inventory_df = pd.DataFrame()
+#     for week in weeksList:
+#         ws.range("C20").value = dep
+#         ws.range("C21").value = "inventory"
+#         ws.range("C22").value = week
+#
+#         df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, dep))
+#         inventory_df = inventory_df.append(df)
+#         inventory_df.to_csv(path + "inventory.csv", index=False)
+#
+#     inventory_df.columns = col
+#     inventory_df.to_csv(path + "inventory.csv", index=False)
+#
+#     ws.range("H15").value = datetime.datetime.now()
+#     ws.range("K15").value = "inventory"
+#     ws.range("C20:C22").clear_contents()  # clear cells with Information's table
+#     ws.range("C23").value = "Ready"
 
 def weeksCalculation(startWeek, endWeek, maxWeekNo):
     """
@@ -111,7 +112,7 @@ def getExcelData():
 
 def loadParameters():
     dir_ = r'\\10.2.5.140\zasoby\Planowanie\PERSONAL FOLDERS\Mariusz Borycki\HitMidKit_DataBase'
-    f_name = 'HitMidKit_parameters.xlsm'
+    f_name = '_main files\HitMidKit_parameters.xlsm'
     directory = dir_ + "\\" + f_name
     df = pd.read_excel(directory, sheet_name='py_inputs', skiprows=1)
     df = df[['Variables Header', 'Chosen Variables']]
@@ -121,6 +122,7 @@ def loadParameters():
 
     startWeek = int(df[df['Variables Header'] == 'Week From']['Chosen Variables'])
     endWeek = int(df[df['Variables Header'] == 'Week To']['Chosen Variables'])
+    minPar = int(df[df['Variables Header'] == 'Minimum Sales Units']['Chosen Variables'])
     dep = df[df['Variables Header'] == 'Departament']['Chosen Variables'].item()
     departmentList = list(df2['Chosen Hierarchy'].unique())
     departmentList = [x for x in departmentList if str(x) != 'nan']
@@ -138,9 +140,9 @@ def loadParameters():
             dep = dep
             hierIdx = hierIdx
 
-    return dep, startWeek, endWeek, path, hierIdx
+    return dep, startWeek, endWeek, minPar, path, hierIdx
 
-def loadInventory(startWeek,endWeek,dep,path,hierIdx):
+def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
     showStatus(path, 1) # 1 status means: busy
 
     if type(dep) == list:
@@ -155,7 +157,7 @@ def loadInventory(startWeek,endWeek,dep,path,hierIdx):
             inventory_df = pd.DataFrame()
             for week in weeksList:
                 # Need it for saving informations into .log file
-                startQuery = datetime.now()
+                startQuery = datetime.datetime.now()
                 startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
 
                 file = open(path + "Not Ready.txt", "w")
@@ -166,11 +168,15 @@ def loadInventory(startWeek,endWeek,dep,path,hierIdx):
                 file.close()
 
                 # print(f"\n-----\nTemporary (dep list-YES):\nStart Week: {startWeek}\nEnd Week: {endWeek}\nWeek: {week}\nDepartment: {dep_name}\nIndex: {hierIdx[dep_index]}")
-                df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, dep_name))
-                inventory_df = inventory_df.append(df)
-                inventory_df.to_csv(path + f"{hierIdx[dep_index]}_HitMidKit.csv", index=False)
+                df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep_name))
+                df['total'] = np.where(df.iloc[:, 5:].sum(axis=1) > 0, 1, 0)
+                df = df[df.total > 0]
+                df.drop(columns={'total'}, inplace=True)
 
-                endQuery = datetime.now()
+                inventory_df = inventory_df.append(df)
+                #inventory_df.to_csv(path + f"{hierIdx[dep_index]}_HitMidKit.csv", index=False)
+
+                endQuery = datetime.datetime.now()
                 endQuery = endQuery.strftime("%H:%M:%S")
                 saveLog(startQuery, endQuery, dep_name, hierIdx[dep_index], week, path)
 
@@ -187,7 +193,7 @@ def loadInventory(startWeek,endWeek,dep,path,hierIdx):
         inventory_df = pd.DataFrame()
         for week in weeksList:
             # Need it for saving informations into .log file
-            startQuery = datetime.now()
+            startQuery = datetime.datetime.now()
             startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
 
             file = open(path + "Not Ready.txt", "w")
@@ -198,11 +204,15 @@ def loadInventory(startWeek,endWeek,dep,path,hierIdx):
             file.close()
 
             # print(f"\n-----\nTemporary (dep list-NO):\nStart Week: {startWeek}\nEnd Week: {endWeek}\nWeek: {week}\nDepartment: {dep}\nIndex: {hierIdx}")
-            df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, dep))
-            inventory_df = inventory_df.append(df)
-            inventory_df.to_csv(path + f"{hierIdx}_HitMidKit.csv", index=False)
+            df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep))
+            df['total'] = np.where(df.iloc[:, 5:].sum(axis=1) > 0, 1, 0)
+            df = df[df.total > 0]
+            df.drop(columns={'total'}, inplace=True)
 
-            endQuery = datetime.now()
+            inventory_df = inventory_df.append(df)
+            #inventory_df.to_csv(path + f"{hierIdx}_HitMidKit.csv", index=False)
+
+            endQuery = datetime.datetime.now()
             endQuery = endQuery.strftime("%H:%M:%S")
             saveLog(startQuery, endQuery, dep, hierIdx, week, path)
 
@@ -230,11 +240,11 @@ def showStatus(path,y_n):
         file.close()
 
 def saveLog(startQuery, endQuery, dep, hierIdx, week, path):
-    today = date.today()
+    today = datetime.datetime.today()
     today = today.strftime("%d/%m/%Y")
-    queryTime = str(datetime.strptime(endQuery, "%H:%M:%S") - datetime.strptime(startQuery, "%H:%M:%S"))
+    queryTime = str(datetime.datetime.strptime(endQuery, "%H:%M:%S") - datetime.datetime.strptime(startQuery, "%H:%M:%S"))
     logList = [today, dep, str(hierIdx), str(week), startQuery, endQuery, queryTime]
 
-    with open(path + 'Log_HitMidKit.log', 'a+') as log_file:
+    with open(path + '../Logs/Log_detailed_HitMidKit.log', 'a+') as log_file:
         log_file.write("\n")
         log_file.writelines(';'.join(logList))
