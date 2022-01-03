@@ -182,7 +182,7 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
             for week in weeksList:
                 startQuery = datetime.datetime.now()
                 startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
-                showStatus(path, 1, dep_name, hierIdx, week)
+                showStatus(path, 1, dep_name, hierIdx[dep_index], week)
                 try:
                     df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep_name))
                 except:
