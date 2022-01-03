@@ -145,7 +145,7 @@ def loadParameters():
     return dep, startWeek, endWeek, minPar, path, hierIdx
 
 def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
-    showStatus(path, 1) # 1 status means: busy
+    # showStatus(path, 1, dep, hierIdx, week=None) # 1 status means: bu#sy
 
     if type(dep) == list:
         for dep_index, dep_name in enumerate(dep):
@@ -161,16 +161,8 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
                 # Need it for saving informations into .log file
                 startQuery = datetime.datetime.now()
                 startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
-
-                file = open(path + "Not Ready.txt", "w")
-                file.write(f"Data are still downloading...\n\n"
-                           f"Department: {dep_name}\n"
-                           f"Hierarchy: {hierIdx[dep_index]}\n"
-                           f"Week: {week}")
-                file.close()
-
+                showStatus(path, 1, dep, hierIdx, week)
                 # print(f"\n-----\nTemporary (dep list-YES):\nStart Week: {startWeek}\nEnd Week: {endWeek}\nWeek: {week}\nDepartment: {dep_name}\nIndex: {hierIdx[dep_index]}")
-
                 try:
                     df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep_name))
                 except:
@@ -209,14 +201,7 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
             # Need it for saving informations into .log file
             startQuery = datetime.datetime.now()
             startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
-
-            file = open(path + "Not Ready.txt", "w")
-            file.write(f"Data are still downloading...\n\n"
-                       f"Department: {dep}\n"
-                       f"Hierarchy: {hierIdx}\n"
-                       f"Week: {week}")
-            file.close()
-
+            showStatus(path, 1, dep, hierIdx, week)
             # print(f"\n-----\nTemporary (dep list-NO):\nStart Week: {startWeek}\nEnd Week: {endWeek}\nWeek: {week}\nDepartment: {dep}\nIndex: {hierIdx}")
             try:
                 df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep))
@@ -243,16 +228,18 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
         inventory_df.columns = col
         inventory_df.to_csv(path + f"{hierIdx}_HitMidKit.csv", index=False)
 
-    showStatus(path, 0)  # 0 status means: NOT busy. Inventory file is ready
+    showStatus(path, 0, dep=None, hierIdx=None, week=None)  # 0 status means: NOT busy. Inventory file is ready
 
-def showStatus(path,y_n):
+def showStatus(path,y_n,dep,hier,week):
     if y_n == 1:
         if os.path.exists(path + "Ready.txt"):
             os.remove(path + "Ready.txt")
 
         file = open(path + "Not Ready.txt", "w")
-        file.write("Data are still downloading...")
-
+        file.write(f"Data are still downloading...\n\n"
+                   f"Department: {dep}\n"
+                   f"Hierarchy: {hier}\n"
+                   f"Week: {week}")
         file.close()
     else:
         if os.path.exists(path + "Not Ready.txt"):
