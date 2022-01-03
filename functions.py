@@ -1,3 +1,5 @@
+import time
+
 import daxDownloader as td
 import daxQueries as daxQ
 import xlwings as xw
@@ -168,7 +170,19 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
                 file.close()
 
                 # print(f"\n-----\nTemporary (dep list-YES):\nStart Week: {startWeek}\nEnd Week: {endWeek}\nWeek: {week}\nDepartment: {dep_name}\nIndex: {hierIdx[dep_index]}")
-                df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep_name))
+
+                try:
+                    df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep_name))
+                except:
+                    try:
+                        time.sleep(60)
+                        df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep_name))
+                    except Exception as ex:
+                        file = open(path + "ConnectionIssue.txt", "w")
+                        file.write(f"Connection error:\n{ex}\n")
+                        file.close()
+                        return None
+
                 df['total'] = np.where(df.iloc[:, 5:].sum(axis=1) > 0, 1, 0)
                 df = df[df.total > 0]
                 df.drop(columns={'total'}, inplace=True)
@@ -204,7 +218,17 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
             file.close()
 
             # print(f"\n-----\nTemporary (dep list-NO):\nStart Week: {startWeek}\nEnd Week: {endWeek}\nWeek: {week}\nDepartment: {dep}\nIndex: {hierIdx}")
-            df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep))
+            try:
+                df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep))
+            except:
+                try:
+                    time.sleep(60)
+                    df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep))
+                except Exception as ex:
+                    file = open(path + "ConnectionIssue.txt", "w")
+                    file.write(f"Connection error:\n{ex}\n")
+                    file.close()
+                    return None
             df['total'] = np.where(df.iloc[:, 5:].sum(axis=1) > 0, 1, 0)
             df = df[df.total > 0]
             df.drop(columns={'total'}, inplace=True)

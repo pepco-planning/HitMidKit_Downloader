@@ -8,6 +8,7 @@ import pandas as pd
 import os
 from sys import path
 path.append(r"dll")
+path.append("c:\Mariusz\MyProjects\HitMidKit_Downloader\dll")
 path.append(os.getcwd()+'\\dll')
 from pyadomd import Pyadomd
 
