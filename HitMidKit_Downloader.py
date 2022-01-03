@@ -15,7 +15,14 @@ def downloadData():
     :return:
     """
 
-    dep, startWeek, endWeek, minPar, path, hierIdx = f.loadParameters()
-    f.loadInventory(startWeek,endWeek,minPar,dep,path,hierIdx)
+    dep, startWeek, endWeek, minPar, path, hierIdx, reportType = f.loadParameters()
+
+    if reportType == "Only Inventory":
+        f.loadInventory(startWeek,endWeek,minPar,dep,path,hierIdx)
+    elif reportType == "All Reports (excl. Inventory)":
+        f.runDaxQueriesExe(startWeek,endWeek,dep,f.dax_query_list,path,hierIdx)
+    else:
+        f.runDaxQueriesExe(startWeek,endWeek,dep,f.dax_query_list,path,hierIdx)
+        f.loadInventory(startWeek,endWeek,minPar,dep,path,hierIdx)
 
 downloadData()
