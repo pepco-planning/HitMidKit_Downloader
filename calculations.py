@@ -183,8 +183,27 @@ def ItemExcl():
     pass
 
 def SubDep():
-    # 7 additional cols. Add it after the meeting with stakeholders
-    pass
+    """
+    Additional columns:
+        ItemCount:          CALCULATE(DISTINCTCOUNT('SKU PLU'[Option]),'SKU PLU'[Sub Department]=EARLIER([Sub Department]),'SKU PLU'[ItemExcl]=0)
+        ROS_V_Tier1:        var Tier1Cut = LOOKUPVALUE(PerfDep[Sls Tier 1 %],PerfDep[Sub Department],SubDep[Sub Department]) return
+                            var Tier1 = ROUNDUP(SubDep[ItemCount]*Tier1Cut,0)
+                            VAR TempTable = CALCULATETABLE('SKU PLU','SKU PLU'[Sub Department]=EARLIER([Sub Department]),'SKU PLU'[ItemExcl]=0)
+
+                            return
+                            MINX(FILTER(ADDCOLUMNS(TempTable,"Temp",RANKX(TempTable,[ROS_VALUE_FINAL],,DESC)),[Temp]<=Tier1),[ROS_VALUE_FINAL])
+        ROS_V_Tier2:        =var Tier2Cut = LOOKUPVALUE(PerfDep[Sls Tier 2 %],PerfDep[Sub Department],SubDep[Sub Department]) return
+                            var Tier2 = ROUNDUP(SubDep[ItemCount]*Tier2Cut,0)
+                            VAR TempTable = CALCULATETABLE('SKU PLU','SKU PLU'[Sub Department]=EARLIER([Sub Department]),'SKU PLU'[ItemExcl]=0)
+
+                            return
+                            MINX(FILTER(ADDCOLUMNS(TempTable,"Temp",RANKX(TempTable,[ROS_VALUE_FINAL],,DESC)),[Temp]<=Tier2),[ROS_VALUE_FINAL])
+        ROS_Man_Tier1:      SUBSTITUTE(LOOKUPVALUE(ROS_overwrite[ROS Tier 1 Man],ROS_overwrite[Sub Department],[Sub Department]),",",".")
+        ROS_Man_Tier2:      SUBSTITUTE(LOOKUPVALUE(ROS_overwrite[ROS Tier 2 Man],ROS_overwrite[Sub Department],[Sub Department]),",",".")
+        ROS_Final_Tier1:    IFERROR(SubDep[ROS_Man_Tier1]*1,SubDep[ROS_V_Tier1])
+        ROS_Final_Tier2:    IFERROR(SubDep[ROS_Man_Tier2]*1,SubDep[ROS_V_Tier2])
+    :return:
+    """
 
 def PLU_Available():
     """
@@ -218,7 +237,35 @@ def ROS_Overwrite():
 
 def KPI_Overwrite():
     """
-    Lots of new columns. Add it after the meeting with stakeholders
+    Additional columns:
+        ST Tier 1 Calc:     VAR Tier1=[ST Tier 1 %]
+                            VAR MG = KPI_Overwrite[Merch Group] RETURN
+                            VAR CALCTABLE = CALCULATETABLE('SKU PLU','SKU PLU'[MG Group]=MG,'SKU PLU'[ItemExcl]=0)
+                            RETURN
+                            VAR MINRANK =COUNTX(CALCTABLE,[Option])*Tier1
+                            RETURN
+                            MINX(FILTER(ADDCOLUMNS(CALCTABLE,"RANK",RANKX(CALCTABLE,[Sell-Through FINAL],,DESC)),[RANK]<=MINRANK),[Sell-Through FINAL])
+        ST Tier 2 Calc:     VAR Tier2=[ST Tier 2 %]
+                            var MG = KPI_Overwrite[Merch Group]
+                            RETURN
+                            VAR CALCTABLE = CALCULATETABLE('SKU PLU','SKU PLU'[MG Group]=MG,'SKU PLU'[ItemExcl]=0)
+                            RETURN
+                            VAR MINRANK =COUNTX(CALCTABLE,[Option])*Tier2
+                            RETURN
+                            MINX(FILTER(ADDCOLUMNS(CALCTABLE,"RANK",RANKX(CALCTABLE,[Sell-Through FINAL],,DESC)),[RANK]<=MINRANK),[Sell-Through FINAL])
+        MD Tier 1 Calc:     VAR Tier1Cut = [MD Tier 1 %]
+                            VAR MerchSeason=KPI_Overwrite[Merch Group] RETURN
+                            CALCULATE(([MD Retail]/[Sales Value])*Tier1Cut,
+                            ALL('SKU PLU'),'SKU PLU'[ItemExcl]=0,'SKU PLU'[MG Group]=MerchSeason)
+        MD Tier 2 Calc:     VAR Tier2Cut = [MD Tier 2 %]
+                            VAR MerchSeason=KPI_Overwrite[Merch Group] RETURN
+                            CALCULATE(([MD Retail]/[Sales Value])*Tier2Cut,
+                            ALL('SKU PLU'),'SKU PLU'[ItemExcl]=0,'SKU PLU'[MG Group]=MerchSeason)
+        ST Tier 1 Final:    IFERROR(VALUE(sUBSTITUTE(KPI_Overwrite[ST Tier 1 Man],",","."))*1,KPI_Overwrite[ST Tier 1 Calc])
+        ST Tier 2 Final:    IFERROR(VALUE(SUBSTITUTE(KPI_Overwrite[ST Tier 2 Man],",","."))*1,KPI_Overwrite[ST Tier 2 Calc])
+        MD Tier 1 Final:    IFERROR(VALUE(SUBSTITUTE(KPI_Overwrite[MD Tier 1 Man],",","."))*1,KPI_Overwrite[MD Tier 1 Calc])
+        MD Tier 2 Final:    IFERROR(VALUE(SUBSTITUTE(KPI_Overwrite[MD Tier 2 Man],",","."))*1,KPI_Overwrite[MD Tier 2 Calc])
+
     :return:
     """
 
