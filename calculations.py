@@ -1,6 +1,13 @@
+import xlwings as xw
+import pandas as pd
+import numpy as np
 
 # Below tables show how the DataModel in PowerPivot looks like
-def Grading():
+def ExclusionType():
+    # no additional cols
+    pass
+
+def calcGrading(df, ans, g2, g3):
     """
     Columns:
         The columns from the file: 'Grading.csv' +
@@ -11,25 +18,19 @@ def Grading():
 
     :return:
     """
+    column_names = ['STR Number', 'STR Company', 'DepSalesV']
+    df.columns = column_names
+    df = df.sort_values('DepSalesV', ascending=False)
+    df['RankX'] = np.arange(df.shape[0]) + 1
 
-def parameters():
-    """
-    Two columns from the excel - 'QueryPar' sheet:
-        Parameter,
-        Value
+    storeCount = len(df['STR Number'].unique())
+    df['Cumm%'] = np.where(ans == "Count", df['RankX'] / storeCount,
+                           df['DepSalesV'].cumsum() / df['DepSalesV'].sum())
 
-    Parameter's used:
-        TimeFrom,
-        TimeTo,
-        Department,
-        Merch Group,
-        Merch Season Type,
-        SKU Mearch Season To,
-        MinPar
-    :return:
-    """
+    df['Grade'] = np.where(df['Cumm%'] < g3, 3, np.where(df['Cumm%'] < g2, 2, 1))
+    return df
 
-def Grades():
+def Grades(path):
     """
     Grades from 'CalcPar' sheet (1,2,3)
 
@@ -63,6 +64,10 @@ def Grades():
         RatioV:             Grades[AvgRosGradeV]/CALCULATE(MIN([AvgRosGradeV]),ALL(Grades),Grades[Grade]=1)
     :return:
     """
+    fileName = path + 'parameters.csv'
+    df = pd.read_csv(fileName)
+
+    pass
 
 def Other():
     """
@@ -268,10 +273,6 @@ def KPI_Overwrite():
 
     :return:
     """
-
-def ExclusionType():
-    # no additional cols
-    pass
 
 def PRH():
     """

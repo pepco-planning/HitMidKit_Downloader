@@ -1,13 +1,38 @@
-import time
-
-import daxDownloader as td
-import daxQueries as daxQ
-import xlwings as xw
-import datetime
 import pandas as pd
 import numpy as np
 import os
-#from datetime import datetime, timedelta, date
+import daxQueries as daxQ
+import datetime
+import time
+import xlwings as xw
+from pyadomd import Pyadomd
+from sys import path
+path.append("c:\Mariusz\MyProjects\HitMidKit_Downloader\dll")
+path.append(os.getcwd() + '\\dll')
+
+def dataFrameFromTabular(query):
+    """
+    # w path.append jest istotna ścieżka
+    # muszą się w niej znajdować 2 pliki:
+    # 1. Microsoft.AnalysisServices.AdomdClient.dll
+    # 2. Microsoft.AnalysisServices.dll
+    # Plików szukaj w C:\Windows\assembly\GAC_MSIL\Microsoft.AnalysisServices.(nazwa pliku)\
+
+    :param query: here are required dax queries we need to download data
+    :return:
+    """
+    connStr = "Provider=MSOLAP;Data Source=LB-P-WE-AS;Catalog=PEPCODW"
+
+    conn = Pyadomd(connStr)
+    conn.open()
+    cursor = conn.cursor()
+    cursor.execute(query)
+    col_names = [i[0] for i in cursor.description]
+    cursor.arraysize = 5000
+    df = pd.DataFrame(cursor.fetchall(), columns=col_names)
+    conn.close()
+
+    return df
 
 dax_query_list = [daxQ.grading,daxQ.sku_plu,daxQ.md,daxQ.plu_available,
                      daxQ.promo_reg,daxQ.promo_tv,daxQ.prh_data,daxQ.perf_dep,daxQ.pcal,daxQ.prh]
@@ -15,7 +40,7 @@ dax_query_list = [daxQ.grading,daxQ.sku_plu,daxQ.md,daxQ.plu_available,
 def runDaxQueries(startWeek,endWeek,dep,dax_query_list,path):
 
     wb = xw.Book.caller()
-    ws = wb.sheets[0]
+    ws = wb.sheets["QueryPar2"]
 
     ws.range("G3:H20").clear_contents() # clear cells with times
     ws.range("K3:L20").clear_contents() # clear cells with info about the files
@@ -27,7 +52,9 @@ def runDaxQueries(startWeek,endWeek,dep,dax_query_list,path):
         ws.range("C23").value = "Not Ready"
         ws.range((index + 3, 7)).value = datetime.datetime.now()
 
-        runDaxQuery(startWeek,endWeek,dep,query,path)
+        df = runDaxQuery(startWeek,endWeek,dep,query,path)
+        q_name = query.__name__ + '.csv'
+        df.to_csv(path + q_name.capitalize(), index=False)
 
         ws.range((index + 3, 8)).value = datetime.datetime.now()
         ws.range((index + 3, 11)).value = query.__name__
@@ -92,9 +119,8 @@ def runDaxQueriesExe(startWeek,endWeek,dep,dax_query_list,path, hierIdx):
     showStatus(path, 0, dep, hier=None, week=None) # 0 means Ready
 
 def runDaxQuery(startWeek,endWeek,dep,dax_query,path):
-    df = td.dataFrameFromTabular(dax_query(startWeek, endWeek, dep))
-    # q_name = dax_query.__name__ + '.csv'
-    # df.to_csv(path + q_name, index=False)
+    df = dataFrameFromTabular(dax_query(startWeek, endWeek, dep))
+
     return df
 
 def weeksCalculation(startWeek, endWeek, maxWeekNo):
@@ -129,12 +155,37 @@ def weeksCalculation(startWeek, endWeek, maxWeekNo):
 
 def getExcelData():
     wb = xw.Book.caller()
-    ws = wb.sheets[0]
+
+    # Downloader (QueryPar)
+    ws = wb.sheets['QueryPar2'] # wb.sheets[3]
     dep = ws["C4"].value
     startWeek = ws["T3"].value
     endWeek = ws["T4"].value
     path = ws["C5"].value + "\\"
-    return dep, startWeek,endWeek, path
+
+    # Calculations (py_inputs)
+    ws2 = wb.sheets['py_inputs']
+    fileName = ws2["O20"].value
+
+    return dep, startWeek,endWeek, path, fileName
+
+def getCalcParam(path,fileName):
+    wb = xw.Book.caller()
+    ws = wb.sheets["QueryPar2"]
+
+    ws.range("C21").value = "parameters"
+    ws.range("C23").value = "Not Ready"
+    ws.range("G13").value = datetime.datetime.now()
+
+    df = pd.read_excel(fileName, sheet_name='py_inputs', skiprows=1,
+                       usecols=['Variables Header', 'Chosen Variables'],converters={'Variables Header':str,'Chosen Variables':str})
+    df = df.dropna()
+    df = df[16:]
+    df.to_csv(path + "parameters.csv", index=False)
+
+    ws.range("H13").value = datetime.datetime.now()
+    ws.range("K13").value = "parameters"
+    ws.range("C23").value = "Ready"
 
 def loadParameters():
     dir_ = r'\\10.2.5.140\zasoby\Planowanie\PERSONAL FOLDERS\Mariusz Borycki\HitMidKit_DataBase'
@@ -172,7 +223,7 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
     if type(dep) == list:
         for dep_index, dep_name in enumerate(dep):
             weeksList = []
-            wList = td.dataFrameFromTabular(daxQ.pcal(startWeek, endWeek, dep_name))
+            wList = dataFrameFromTabular(daxQ.pcal(startWeek, endWeek, dep_name))
             for week in wList.iloc[:, 5]:
                 weeksList.append(week)
             del wList
@@ -184,11 +235,11 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
                 startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
                 showStatus(path, 1, dep_name, hierIdx[dep_index], week)
                 try:
-                    df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep_name))
+                    df = dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep_name))
                 except:
                     try:
                         time.sleep(60)
-                        df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep_name))
+                        df = dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep_name))
                     except Exception as ex:
                         file = open(path + "ConnectionIssue.txt", "w")
                         file.write(f"Connection error:\n{ex}\n")
@@ -208,7 +259,7 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
             inventory_df.to_csv(path + f"{hierIdx[dep_index]}_HitMidKit.csv", index=False)
     else:
         weeksList = []
-        wList = td.dataFrameFromTabular(daxQ.pcal(startWeek, endWeek, dep))
+        wList = dataFrameFromTabular(daxQ.pcal(startWeek, endWeek, dep))
         for week in wList.iloc[:, 5]:
             weeksList.append(week)
         del wList
@@ -220,11 +271,11 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
             startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
             showStatus(path, 1, dep, hierIdx, week)
             try:
-                df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep))
+                df = dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep))
             except:
                 try:
                     time.sleep(60)
-                    df = td.dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep))
+                    df = dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep))
                 except Exception as ex:
                     file = open(path + "ConnectionIssue.txt", "w")
                     file.write(f"Connection error:\n{ex}\n")
