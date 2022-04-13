@@ -196,7 +196,7 @@ def prh(startWeek,endWeek,dep):
                 'Product Hierarchy PRH'[PRH Category]
             """
 
-def sku_plu(startWeek,endWeek,dep):
+def sku_plu(startWeek,endWeek,dep,MinPar):
     dep_name = '"' + dep + '"'
 
     return """
@@ -226,7 +226,7 @@ def sku_plu(startWeek,endWeek,dep):
                 filter(
                     SUMMARIZECOLUMNS(
                     'Products SKU'[sku plu],
-                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>2000)
+                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + MinPar + """)
             
             EVALUATE
             SUMMARIZECOLUMNS (
@@ -250,7 +250,7 @@ def sku_plu(startWeek,endWeek,dep):
             )
     """
 
-def md(startWeek,endWeek,dep):
+def md(startWeek,endWeek,dep,MinPar):
     dep_name = '"' + dep + '"'
     return """
             DEFINE
@@ -281,7 +281,7 @@ def md(startWeek,endWeek,dep):
                 filter(
                     SUMMARIZECOLUMNS(
                     'Products SKU'[sku plu],
-                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>2000)
+                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + MinPar + """)
             
             
             EVALUATE
@@ -294,7 +294,7 @@ def md(startWeek,endWeek,dep):
             )
     """
 
-def plu_available(startWeek,endWeek,dep):
+def plu_available(startWeek,endWeek,dep,MinPar):
     dep_name = '"' + dep + '"'
     return """
             DEFINE
@@ -323,7 +323,7 @@ def plu_available(startWeek,endWeek,dep):
                 filter(
                     SUMMARIZECOLUMNS(
                     'Products SKU'[sku plu],
-                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>2000)
+                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + MinPar + """)
             
             EVALUATE
             SUMMARIZECOLUMNS(
@@ -342,10 +342,13 @@ def plu_available(startWeek,endWeek,dep):
                 'Products SKU'[SKU PBG Available],
                 'Products SKU'[SKU PIT Available],
                 'Products SKU'[SKU PRS Available],
+                'Products SKU'[SKU PES Available],
+                'Products SKU'[SKU PAT Available],
+                'Products SKU'[SKU PDE Available],
                 SKUfin)
     """
 
-def promo_reg(startWeek,endWeek,dep):
+def promo_reg(startWeek,endWeek,dep,MinPar):
     dep_name = '"' + dep + '"'
     return """
             DEFINE
@@ -376,7 +379,7 @@ def promo_reg(startWeek,endWeek,dep):
                 filter(
                     SUMMARIZECOLUMNS(
                     'Products SKU'[sku plu],
-                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>2000)
+                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + MinPar + """)
             
             EVALUATE
             SUMMARIZECOLUMNS (
@@ -395,7 +398,7 @@ def promo_reg(startWeek,endWeek,dep):
             )
     """
 
-def promo_tv(startWeek,endWeek,dep):
+def promo_tv(startWeek,endWeek,dep,MinPar):
     dep_name = '"' + dep + '"'
     return """
             DEFINE
@@ -426,7 +429,7 @@ def promo_tv(startWeek,endWeek,dep):
                 filter(
                     SUMMARIZECOLUMNS(
                     'Products SKU'[sku plu],
-                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>2000)
+                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + MinPar + """)
             
             
             EVALUATE
