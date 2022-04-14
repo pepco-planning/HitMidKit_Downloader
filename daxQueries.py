@@ -1,4 +1,4 @@
-def inventory(startWeek,endWeek,currentWeek,minPar,dep):
+def inventory(startWeek,endWeek,currentWeek,MinPar,dep):
     dep_name = '"' + dep + '"'
     return """
             DEFINE
@@ -60,7 +60,7 @@ def inventory(startWeek,endWeek,currentWeek,minPar,dep):
                 filter(
                     SUMMARIZECOLUMNS(
                     'Products SKU'[sku plu],
-                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + str(minPar) + """)
+                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + str(MinPar) + """)
             
             EVALUATE
             SUMMARIZECOLUMNS(
@@ -226,7 +226,7 @@ def sku_plu(startWeek,endWeek,dep,MinPar):
                 filter(
                     SUMMARIZECOLUMNS(
                     'Products SKU'[sku plu],
-                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + MinPar + """)
+                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + str(MinPar) + """)
             
             EVALUATE
             SUMMARIZECOLUMNS (
@@ -281,7 +281,7 @@ def md(startWeek,endWeek,dep,MinPar):
                 filter(
                     SUMMARIZECOLUMNS(
                     'Products SKU'[sku plu],
-                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + MinPar + """)
+                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + str(MinPar) + """)
             
             
             EVALUATE
@@ -323,7 +323,7 @@ def plu_available(startWeek,endWeek,dep,MinPar):
                 filter(
                     SUMMARIZECOLUMNS(
                     'Products SKU'[sku plu],
-                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + MinPar + """)
+                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + str(MinPar) + """)
             
             EVALUATE
             SUMMARIZECOLUMNS(
@@ -379,7 +379,7 @@ def promo_reg(startWeek,endWeek,dep,MinPar):
                 filter(
                     SUMMARIZECOLUMNS(
                     'Products SKU'[sku plu],
-                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + MinPar + """)
+                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + str(MinPar) + """)
             
             EVALUATE
             SUMMARIZECOLUMNS (
@@ -429,7 +429,7 @@ def promo_tv(startWeek,endWeek,dep,MinPar):
                 filter(
                     SUMMARIZECOLUMNS(
                     'Products SKU'[sku plu],
-                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + MinPar + """)
+                        'Products SKU'[SKU Colour],SKU,"slstemp",CALCULATE([Sales Qty dsale],pcal)),[slstemp]>""" + str(MinPar) + """)
             
             
             EVALUATE

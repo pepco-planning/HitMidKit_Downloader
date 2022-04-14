@@ -7,7 +7,7 @@ import time
 import xlwings as xw
 
 from sys import path
-#path.append("c:\Mariusz\MyProjects\HitMidKit_Downloader\dll")
+path.append("c:\Mariusz\MyProjects\HitMidKit_Downloader\dll")
 path.append(os.getcwd() + '\\dll')
 from pyadomd import Pyadomd
 
@@ -170,8 +170,13 @@ def getExcelData():
     # Calculations (py_inputs)
     ws2 = wb.sheets['py_inputs']
     fileName = ws2["O20"].value
+    chosenHierarchy = ws2["O5"].value
+    MinPar = ws2["O14"].value # or O24??
+    eDur = ws2["O25"].value
+    wDur = ws2["O26"].value
+    sDur = ws2["O27"].value
 
-    return dep, startWeek,endWeek, path, fileName
+    return dep, startWeek,endWeek, path, fileName, chosenHierarchy, MinPar, eDur, wDur, sDur
 
 def getCalcParam(path,fileName):
     wb = xw.Book.caller()
@@ -192,6 +197,10 @@ def getCalcParam(path,fileName):
     ws.range("C23").value = "Ready"
 
 def loadParameters():
+    """
+    Load parameters foe Inventory report. Used by Admin once per quarter
+    :return:
+    """
     dir_ = r'\\10.2.5.140\zasoby\Planowanie\PERSONAL FOLDERS\Mariusz Borycki\HitMidKit_DataBase'
     f_name = '_main files\HitMidKit_parameters.xlsm'
     directory = dir_ + "\\" + f_name
@@ -333,6 +342,26 @@ def saveLog(startQuery, endQuery, dep, hierIdx, week, path, query):
 """
 Hit Mid Kit Model Functions
 """
+def getParameters():
+    wb = xw.Book.caller()
+    #ws = wb.sheets["notes"]
+    ws = wb.sheets['py_inputs']
+
+    # ws.range("C9").value = "Parameters"
+    # ws.range("D9").value = "Not Ready"
+    # ws.range("E9").value = datetime.datetime.now()
+    fileName = ws["O20"].value
+
+    df = pd.read_excel(fileName, sheet_name='py_inputs', skiprows=1,
+                       usecols=['Variables Header', 'Chosen Variables'],converters={'Variables Header':str,'Chosen Variables':str})
+    df.dropna(inplace=True)
+    df.reset_index(drop=True, inplace=True)
+
+    #ws.range("C11").value = df
+    #ws.range("G9").value = df.loc[df['Variables Header']=='Week To','Chosen Variables'].values
+    # ws.range("F9").value = datetime.datetime.now()
+    # ws.range("D9").value = "Ready"
+    return df
 
 def dataFrameFromTabular(query):
     """
@@ -525,16 +554,14 @@ def effectiveWeeks(df):
     return df_temp
 
 def weeksCalc(df, df_sku, WeekMin, WeekMax, eDur, wDur, sDur):
-    df1 = df.groupby(['Option', 'SKU Store Grade']).agg(
-        {'SalesU': 'sum', 'SalesV': 'sum', 'InStock': 'sum'}).reset_index()
+    df1 = df.groupby(['Option', 'SKU Store Grade']).agg({'SalesU': 'sum', 'SalesV': 'sum', 'InStock': 'sum'}).reset_index()
     df1.rename(columns={'InStock': 'In-Stock Stores'}, inplace=True)
 
     # Sprzedaż dla wszystkich ale InStock per grade?? Czy to jest poprawna formuła w DataModel dla Sales Units in Period??
     df_temp1 = df[(df.PeriodType != 'Markdown')].groupby(['Option', 'Wk_Key', 'PeriodType']) \
         .agg({'MinStores': 'mean'}).reset_index()
 
-    df_temp2 = df[(df.PeriodType != 'Markdown') & (df.StoreGrade >= df['SKU Store Grade'])].groupby(
-        ['Option', 'Wk_Key', 'PeriodType']) \
+    df_temp2 = df[(df.PeriodType != 'Markdown') & (df.StoreGrade >= df['SKU Store Grade'])].groupby(['Option', 'Wk_Key', 'PeriodType']) \
         .agg({'InStock': 'sum'}).reset_index()
 
     # Total Sales with Exclusion
@@ -542,8 +569,7 @@ def weeksCalc(df, df_sku, WeekMin, WeekMax, eDur, wDur, sDur):
 
     # weeks from/to
     df_temp4 = df_temp3.groupby(['Option', 'Wk_Key']).agg({'InStock': 'sum', 'MinStores': 'mean'}).reset_index()
-    df_WeekStartTemp = df_temp4[df_temp4['InStock'] >= df_temp4['MinStores']].groupby('Option')[
-        'Wk_Key'].min().reset_index()
+    df_WeekStartTemp = df_temp4[df_temp4['InStock'] >= df_temp4['MinStores']].groupby('Option')['Wk_Key'].min().reset_index()
     df_WeekStartTemp.rename(columns={'Wk_Key': 'WeekStartTemp'}, inplace=True)
 
     # left join because if Merch Type = Y then no matter if InStock >= MinStores. Double check it. CONFIRM!

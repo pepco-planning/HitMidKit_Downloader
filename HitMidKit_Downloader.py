@@ -1,4 +1,4 @@
-import functions as f
+import HitMidKit_Functions as f
 
 def downloadData():
     """
