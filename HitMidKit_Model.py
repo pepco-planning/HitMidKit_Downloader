@@ -1,52 +1,34 @@
 ############################################################################################
 # Import Files
-import os
-# from sys import path
-# path.append(os.getcwd() + '\\dll')
-# from pyadomd import Pyadomd
-
-from HitMidKit_Functions import *
-from daxQueries import *
+import HitMidKit_Functions as func
+import daxQueries as dax
+import pandas as pd
+import numpy as np
 
 def modelPart1():
-    Parameters = getParameters()
-    # Create Variables
-    HIERARCHY = Parameters[Parameters['Variables Header'] == 'Hierarchy']['Chosen Variables'].item()
-    DEPARTMENT = Parameters[Parameters['Variables Header'] == 'Departament']['Chosen Variables'].item()
-    GRADING_TYPE = Parameters[Parameters['Variables Header'] == 'Grading Type']['Chosen Variables'].item()
-    START_WEEK = int(Parameters[Parameters['Variables Header'] == 'Week From']['Chosen Variables'])
-    END_WEEK = int(Parameters[Parameters['Variables Header'] == 'Week To']['Chosen Variables'])
-    MIN_PAR = int(Parameters[Parameters['Variables Header'] == 'Minimum Sales Units']['Chosen Variables'])
-    MIN_TOT_SLS = int(Parameters[Parameters['Variables Header'] == 'MinTotSls']['Chosen Variables'])
-    MIN_STR_STK = int(Parameters[Parameters['Variables Header'] == 'MinStrStk']['Chosen Variables'])
-    STR_COUNT = float(Parameters[Parameters['Variables Header'] == 'StrCount']['Chosen Variables'])
-    WEEK_EXCL = float(Parameters[Parameters['Variables Header'] == 'WeekExcl']['Chosen Variables'])
-    E_DURATION = int(Parameters[Parameters['Variables Header'] == 'E Merch Group Duration']['Chosen Variables'])
-    W_DURATION = int(Parameters[Parameters['Variables Header'] == 'W Merch Group Duration']['Chosen Variables'])
-    S_DURATION = int(Parameters[Parameters['Variables Header'] == 'S Merch Group Duration']['Chosen Variables'])
+    PARAMETERS  = func.getParameters(func.getPath())
 
-    PATH_INVENTORY = r"c:\Mariusz\MyProjects\HitMidKit_Downloader\input data\Analysis\Inventory"
-    df_Inventory = pd.read_csv(PATH_INVENTORY + '\\' + f'{HIERARCHY}_HitMidKit.csv')
+    df_Inventory = pd.read_csv(PARAMETERS['Path Inventory'] + "\\" + f"{PARAMETERS['Hierarchy']}_HitMidKit.csv")
 
     ############################################################################################
     # variable for DAX
-    df_Grading = dataFrameFromTabular(grading(START_WEEK,END_WEEK,DEPARTMENT))
-    df_Markdown = dataFrameFromTabular(md(START_WEEK,END_WEEK,DEPARTMENT,MIN_PAR))
-    df_Pcal = dataFrameFromTabular(pcal(START_WEEK,END_WEEK,DEPARTMENT))
-    df_Perf = dataFrameFromTabular(perf_dep(START_WEEK,END_WEEK,DEPARTMENT))
-    df_Plu_available = dataFrameFromTabular(plu_available(START_WEEK,END_WEEK,DEPARTMENT,MIN_PAR))
-    df_Prh = dataFrameFromTabular(prh(START_WEEK,END_WEEK,DEPARTMENT))
-    df_Prh_data = dataFrameFromTabular(prh_data(START_WEEK,END_WEEK,DEPARTMENT))
-    df_Promo_reg = dataFrameFromTabular(promo_reg(START_WEEK,END_WEEK,DEPARTMENT,MIN_PAR))
-    df_Promo_tv = dataFrameFromTabular(promo_tv(START_WEEK,END_WEEK,DEPARTMENT,MIN_PAR))
-    df_Sku_plu = dataFrameFromTabular(sku_plu(START_WEEK,END_WEEK,DEPARTMENT,MIN_PAR))
+    df_Grading = func.dataFrameFromTabular(dax.grading(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament']))
+    df_Markdown = func.dataFrameFromTabular(dax.md(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament'],PARAMETERS['Minimum Sales Units']))
+    df_Pcal = func.dataFrameFromTabular(dax.pcal(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament']))
+    df_Perf = func.dataFrameFromTabular(dax.perf_dep(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament']))
+    df_Plu_available = func.dataFrameFromTabular(dax.plu_available(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament'],PARAMETERS['Minimum Sales Units']))
+    df_Prh = func.dataFrameFromTabular(dax.prh(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament']))
+    df_Prh_data = func.dataFrameFromTabular(dax.prh_data(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament']))
+    df_Promo_reg = func.dataFrameFromTabular(dax.promo_reg(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament'],PARAMETERS['Minimum Sales Units']))
+    df_Promo_tv = func.dataFrameFromTabular(dax.promo_tv(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament'],PARAMETERS['Minimum Sales Units']))
+    df_Sku_plu = func.dataFrameFromTabular(dax.sku_plu(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament'],PARAMETERS['Minimum Sales Units']))
 
     ############################################################################################
     # Data Transformation
     # Changing column names. Remove Characters such as '[', ']'
     table_list = [df_Grading,df_Markdown,df_Pcal,df_Perf,df_Plu_available,df_Prh,df_Prh_data,df_Promo_reg,df_Promo_tv,df_Sku_plu]
     for table in range(len(table_list)):
-        cols = changeColumnName(table_list[table].columns)
+        cols = func.changeColumnName(table_list[table].columns)
         table_list[table].columns = cols
 
     ############################################################################################
@@ -63,18 +45,18 @@ def modelPart1():
     df_Promo_reg.rename(columns={'PCAL_WEEK_KEY': 'Wk_Key'}, inplace=True)
 
     # Create 'Option' column
-    df_Promo_reg = createOption(df_Promo_reg)
-    df_Sku_plu = createOption(df_Sku_plu)
-    df_Plu_available = createOption(df_Plu_available)
-    df_Inventory = createOption(df_Inventory)
-    df_Promo_tv = createOption(df_Promo_tv)
-    df_Markdown = createOption(df_Markdown)
+    df_Promo_reg = func.createOption(df_Promo_reg)
+    df_Sku_plu = func.createOption(df_Sku_plu)
+    df_Plu_available = func.createOption(df_Plu_available)
+    df_Inventory = func.createOption(df_Inventory)
+    df_Promo_tv = func.createOption(df_Promo_tv)
+    df_Markdown = func.createOption(df_Markdown)
 
     # Sometimes we have duplicates in SKU PLU (different initial price/margin). Keep the newest ones
     df_Sku_plu.drop(df_Sku_plu[df_Sku_plu.Option.duplicated(keep='first')].index, inplace = True)
 
     # Replace values to get just integer values: 0 if not [1,2,3]
-    df_Sku_plu['SKU Store Grade'] = df_Sku_plu['SKU Store Grade'].apply(replace_grade)
+    df_Sku_plu['SKU Store Grade'] = df_Sku_plu['SKU Store Grade'].apply(func.replace_grade)
     df_Sku_plu['SKU Store Grade'] = df_Sku_plu['SKU Store Grade'].astype(int)
     df_Sku_plu['SKU Store Grade'].unique()
     WeekMin = df_Pcal['Wk_Key'].min()
@@ -83,7 +65,7 @@ def modelPart1():
     ############################################################################################
     # CALCULATIONS
     # Add weeks and gradings
-    df_inv = addWeekKey(addCountry(df_Inventory, df_Grading, Parameters, GRADING_TYPE), df_Pcal)
+    df_inv = func.addWeekKey(func.addCountry(df_Inventory, df_Grading, float(PARAMETERS['Grade2']), float(PARAMETERS['Grade3']),PARAMETERS['Grading Type']), df_Pcal)
 
     # Add "Plu Available" to the main table
     df_plu = df_Plu_available[['STR Company', 'Option', 'Available']].drop_duplicates()
@@ -92,10 +74,10 @@ def modelPart1():
     df_inv2['Available'] = df_inv2['Available'].astype(int)
 
     # Add "Period Type" column (Promo, Markdown, Regular)
-    df_inv3 = showPromo(df_inv2, df_Promo_reg, df_Sku_plu)
+    df_inv3 = func.showPromo(df_inv2, df_Promo_reg, df_Sku_plu)
 
     # Calculate InStock and MinInStock *1
-    df_inv3['InStock'] = np.where(((df_inv3['SalesU']>0)|(df_inv3['CSOHU']>MIN_STR_STK)),1,0)
+    df_inv3['InStock'] = np.where(((df_inv3['SalesU']>0)|(df_inv3['CSOHU']>int(PARAMETERS['MinStrStk']))),1,0)
     df_inv3['MinInStock'] = np.where(((df_inv3['SalesU']>0)|(df_inv3['CSOHU']>0)),1,0)
 
     # Fill Store Grade with zeros (NaN to 0) and set the data type into integer
@@ -103,12 +85,13 @@ def modelPart1():
     df_inv3['StoreGrade'] = df_inv3['StoreGrade'].astype(int)
 
     # Calculate amount of stores per grade for each PLU
-    df_gs = GradeStores(df_Plu_available,df_Sku_plu,Parameters,df_Grading,GRADING_TYPE) .groupby('Option')['GradeStores'].sum().reset_index()
+    df_gs = func.GradeStores(df_Plu_available,df_Sku_plu,float(PARAMETERS['Grade2']), float(PARAMETERS['Grade3']),
+                             df_Grading,PARAMETERS['Grading Type']) .groupby('Option')['GradeStores'].sum().reset_index()
 
     # Add Grade Stores into the main table
     df4 = pd.merge(df_inv3,df_gs,on='Option',how='left')
-    df4['MinStores'] = (df4['GradeStores'] * STR_COUNT).round(2) # not less than 60% of total stores
-    df4['MinStoresX'] = (df4['GradeStores'] * WEEK_EXCL).round(2) # not less than 35% of total stores
+    df4['MinStores'] = (df4['GradeStores'] * float(PARAMETERS['StrCount'])).round(2) # not less than 60% of total stores
+    df4['MinStoresX'] = (df4['GradeStores'] * float(PARAMETERS['WeekExcl'])).round(2) # not less than 35% of total stores
 
     # Add 'SKU Store Grade' to the main table
     df_temp = df_Sku_plu[['Option','SKU Store Grade']]
@@ -117,16 +100,21 @@ def modelPart1():
 
     # Add Item Exclusion column (0 as default which means do not exclude the PLU)
     df4['ItemExcl'] = 0
-    df4 = weeksCalc(df4, df_Sku_plu,WeekMin,WeekMax,E_DURATION,W_DURATION,S_DURATION)
+    df4 = func.weeksCalc(df4, df_Sku_plu,WeekMin,WeekMax,
+                         int(PARAMETERS['E Merch Group Duration']),int(PARAMETERS['W Merch Group Duration']),int(PARAMETERS['S Merch Group Duration']))
     # df4.to_csv(PATH_DF4 + f"\df4_"+str(HIERARCHY)+"_0414.csv",index=False)
 
+########################
+    """SECOND PART OF THE MODEL - thing how to save the first part to avoid running it every time..."""
     # Aggregation - Option level
-    df6 = InventoryAggregation(df4, df_Sku_plu, WeekMin, WeekMax,E_DURATION,W_DURATION,S_DURATION)
+    df6 = func.InventoryAggregation(df4, df_Sku_plu, WeekMin, WeekMax,
+                                    int(PARAMETERS['E Merch Group Duration']),int(PARAMETERS['W Merch Group Duration']),int(PARAMETERS['S Merch Group Duration']))
 
-    avgROS, avgROS_Ratio = grade_multiEquivalentU(df4, df_Sku_plu, MIN_TOT_SLS)
-    avgROSV, avgROS_RatioV = grade_multiEquivalentV(df4, df_Sku_plu, MIN_TOT_SLS)
+    avgROS, avgROS_Ratio = func.grade_multiEquivalentU(df4, df_Sku_plu, int(PARAMETERS['MinTotSls']))
+    avgROSV, avgROS_RatioV = func.grade_multiEquivalentV(df4, df_Sku_plu, int(PARAMETERS['MinTotSls']))
 
-    df_sellThru = avgSellThru(df4,df_Sku_plu,WeekMin,WeekMax,E_DURATION,W_DURATION,S_DURATION)
+    df_sellThru = func.avgSellThru(df4,df_Sku_plu,WeekMin,WeekMax,
+                                   int(PARAMETERS['E Merch Group Duration']),int(PARAMETERS['W Merch Group Duration']),int(PARAMETERS['S Merch Group Duration']))
     df6 = pd.merge(df6, df_sellThru, on=['Option','SKU Store Grade'], how='left')
 
     # Finalization ROS *2
@@ -163,7 +151,7 @@ def modelPart1():
                                      1),0)
 
     # Item Exclusion
-    df_effectiveWeeks = effectiveWeeks(df4)
+    df_effectiveWeeks = func.effectiveWeeks(df4)
     df8 = pd.merge(df8,df_effectiveWeeks,on='Option',how='left')
     df8['Effective Weeks'].fillna(0,inplace=True)
     df8['Effective Weeks'] = df8['Effective Weeks'].astype(int)
@@ -189,14 +177,14 @@ def modelPart1():
     df_final['ROS Margin Value'] = df_final['Final ROS_V'] / df_final['VAT'] * df_final['Sales Margin']
 
     # # Scoring A
-    df_perf, ST_Tier_1, ST_Tier_2, MD_Tier1, MD_Tier2 = calcPerf(df_Perf,HIERARCHY)
+    df_perf, ST_Tier_1, ST_Tier_2, MD_Tier1, MD_Tier2 = func.calcPerf(df_Perf,PARAMETERS['Hierarchy'])
 
     score_cols = ['Option','SKU Merch Type','ItemExcl','Sales Value','Final ROS_V', 'ROS Margin Value', 'Avg Sell-Through In Period',
                   'Markdown Value','SKU Sub Department', 'SKU Category']
     df_score1 = df_final[score_cols]
 
 
-    if HIERARCHY[2] == '2': # division 2: Non Clothing
+    if PARAMETERS['Hierarchy'][2] == '2': # division 2: Non Clothing
         df_score1 = pd.merge(df_score1, df_perf[['SKU Sub Department','Tier1','Tier2','Tier3']], on='SKU Sub Department', how='inner')
     else:
         df_score1 = pd.merge(df_score1, df_perf[['SKU Sub Department','SlsTier1','SlsTier2']], on='SKU Sub Department', how='inner')
@@ -209,10 +197,10 @@ def modelPart1():
     ros_list = ['Final ROS_V','ROS Value','ROS Score']
     margin_list = ['ROS Margin Value','Margin Value','Margin Score']
 
-    df_ros = calcScoringROS(ros_list[0],ros_list[1],ros_list[2],df_score1,HIERARCHY)
-    df_margin = calcScoringROS(margin_list[0],margin_list[1],margin_list[2],df_score1,HIERARCHY)
-    df_st = calcScoringSellThru(df_score1,ST_Tier_1,ST_Tier_2)
-    df_md = calcScoringMD(df_score1,MD_Tier1,MD_Tier2)
+    df_ros = func.calcScoringROS(ros_list[0],ros_list[1],ros_list[2],df_score1,PARAMETERS['Hierarchy'])
+    df_margin = func.calcScoringROS(margin_list[0],margin_list[1],margin_list[2],df_score1,PARAMETERS['Hierarchy'])
+    df_st = func.calcScoringSellThru(df_score1,ST_Tier_1,ST_Tier_2)
+    df_md = func.calcScoringMD(df_score1,MD_Tier1,MD_Tier2)
     df_score2 = pd.merge(df_score1,df_ros,on='Option',how='left')
     df_score2 = pd.merge(df_score2,df_st,on='Option',how='left')
     df_score2 = pd.merge(df_score2,df_margin,on='Option',how='left')
@@ -221,7 +209,7 @@ def modelPart1():
     df_score2['MD_SLS'].fillna(0,inplace=True)
     df_score2['MD Score'] = np.where(df_score2['MD_SLS']==0,1,df_score2['MD Score'])
 
-    if HIERARCHY[2] == '2':
+    if PARAMETERS['Hierarchy'][2] == '2':
         df_score2['TOTAL SCORE'] = df_score2['ROS Score'] + df_score2['Margin Score'] + np.where(df_score2['SKU Merch Type']=="Y",0,df_score2['ST Score'])
 
         df_score2['HIT / KIT / MID'] = np.where((df_score2['SKU Merch Type']=="Y")&(df_score2['TOTAL SCORE']>=2.5),"01_HIT",
@@ -232,7 +220,7 @@ def modelPart1():
 
         df_score2['HIT / KIT / MID'] = np.where(df_score2['TOTAL SCORE']>2,"01_HIT",
                                                 np.where(df_score2['TOTAL SCORE']>1,"02_MID","03_KIT"))
-    if HIERARCHY[2] == '2':
+    if PARAMETERS['Hierarchy'][2] == '2':
         cols = ['Option','ROS Score','ST Score','Margin Score','TOTAL SCORE','HIT / KIT / MID']
     else:
         cols = ['Option','ROS Score','ST Score','MD Score','MD_SLS','TOTAL SCORE','HIT / KIT / MID']
@@ -263,12 +251,17 @@ def modelPart1():
                          'Promo ROS','Promo Adjusted ROS','ROS FINAL','RAW ROS Value (excludes MD)','Promo Adjusted ROS Value',
                          'ROS Value FINAL','ROS Score','Closing Stock Units','Sell-Through in Period','Sell-Through Score',
                          'MD Retail','MD % SLS','MD Score','TOTAL SCORE','HIT / KIT / MID','ItemExcl']
-    if HIERARCHY[2] == '2':
+    if PARAMETERS['Hierarchy'][2] == '2':
         df_final = df_final[hardline_cols]
     else:
         df_final = df_final[clothing_cols]
 
-    return df_final, HIERARCHY
+    return df_final, PARAMETERS['Hierarchy']
+
+df, hier = modelPart1()
+
+df.to_excel(r'c:\Mariusz\MyProjects\HitMidKit_Downloader\workbook\file.xlsx',index=False)
+func.saveStatus(func.getPath(), 'Summary', hier, df)
 ############################################################################################
 # QUESTIONS
 """

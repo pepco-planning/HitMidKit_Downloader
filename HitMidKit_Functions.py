@@ -5,10 +5,17 @@ import daxQueries as daxQ
 import datetime
 import time
 import xlwings as xw
-
+import sys
 from sys import path
-path.append("c:\Mariusz\MyProjects\HitMidKit_Downloader\dll")
-path.append(os.getcwd() + '\\dll')
+#from openpyxl import load_workbook
+#path.append("c:\Mariusz\MyProjects\HitMidKit_Downloader\dll")
+#path.append(os.getcwd() + '\\dll')
+
+if getattr(sys, 'frozen', False):
+    path.append(os.path.dirname(sys.executable) + '\\dll')
+else:
+    path.append(os.path.dirname(os.path.abspath(__file__)) + '\\dll')
+
 from pyadomd import Pyadomd
 
 """
@@ -342,27 +349,6 @@ def saveLog(startQuery, endQuery, dep, hierIdx, week, path, query):
 """
 Hit Mid Kit Model Functions
 """
-def getParameters():
-    wb = xw.Book.caller()
-    #ws = wb.sheets["notes"]
-    ws = wb.sheets['py_inputs']
-
-    # ws.range("C9").value = "Parameters"
-    # ws.range("D9").value = "Not Ready"
-    # ws.range("E9").value = datetime.datetime.now()
-    fileName = ws["O20"].value
-
-    df = pd.read_excel(fileName, sheet_name='py_inputs', skiprows=1,
-                       usecols=['Variables Header', 'Chosen Variables'],converters={'Variables Header':str,'Chosen Variables':str})
-    df.dropna(inplace=True)
-    df.reset_index(drop=True, inplace=True)
-
-    #ws.range("C11").value = df
-    #ws.range("G9").value = df.loc[df['Variables Header']=='Week To','Chosen Variables'].values
-    # ws.range("F9").value = datetime.datetime.now()
-    # ws.range("D9").value = "Ready"
-    return df
-
 def dataFrameFromTabular(query):
     """
     # w path.append jest istotna ścieżka
@@ -407,19 +393,7 @@ def createOption(df):
     df['Option'] = df['SKU PLU'].astype(str) + " " + df['SKU Colour'].astype(str)
     return df
 
-def showGrades(df):
-    columnNames = ['Grade', 'Cut-Off (Count / Value)']
-    df = df[-3:].copy()
-    df.columns = columnNames
-    df['Grade'] = df.loc[:, ('Grade')].str.replace('Grade', '').astype(int)
-
-    grades = list()
-    for x in df.iloc[:, 1]:
-        grades.append(x)
-
-    return float(grades[1]), float(grades[2])
-
-def calcGrading(df, df_param, ans):
+def calcGrading(df, g2, g3, ans):
     df = df.sort_values('DepSalesV', ascending=False)
     df['RankX'] = np.arange(df.shape[0]) + 1
 
@@ -427,13 +401,12 @@ def calcGrading(df, df_param, ans):
     df['Cumm%'] = np.where(ans == "Count", df['RankX'] / storeCount,
                            df['DepSalesV'].cumsum() / df['DepSalesV'].sum())
 
-    g2, g3 = showGrades(df_param)
-    df['Grade'] = np.where(df['Cumm%'] < g3, 3, np.where(df['Cumm%'] < g2, 2, 1))
+    df['Grade'] = np.where(df['Cumm%'] < float(g3), 3, np.where(df['Cumm%'] < float(g2), 2, 1))
     return df
 
-def addCountry(df_inv, df_grad, df_param, var_answer):
+def addCountry(df_inv, df_grad, grade2, grade3, var_answer):
     # STR Company + Grade
-    df = calcGrading(df_grad, df_param, var_answer)
+    df = calcGrading(df_grad, grade2, grade3, var_answer)
     df = df[['STR Number', 'Grade', 'STR Company']]
     df['STR Number'] = df['STR Number'].astype(int)
 
@@ -512,29 +485,28 @@ def replace_grade(grade):
     else:
         return grade
 
-def GradeStores(Plu_available, Sku_plu, Parameters, Grading, var_answer):
+def GradeStores(Plu_available, Sku_plu, Grade2, Grade3, Grading, var_answer):
     """
     StoresCount: Amount of stores in reality (based od Grading)
     GradeStores: Amount of stores based on 'Cut Off - variable'
 
     """
-    g2, g3 = showGrades(Parameters)
 
     df = Sku_plu[['Option', 'SKU Store Grade']].drop_duplicates()
     df2 = pd.merge(Plu_available, df, on='Option', how='inner')  # czy dać tu inner czy outer??
     df2 = df2[df2['Available'] == 1]  # czy dać tu inner czy outer??
     # df2['SKU Store Grade'] = df2['SKU Store Grade'].astype(str)
 
-    df3 = calcGrading(Grading, Parameters, var_answer).groupby(['Grade', 'STR Company'])['STR Number'].count() \
+    df3 = calcGrading(Grading, Grade2, Grade3, var_answer).groupby(['Grade', 'STR Company'])['STR Number'].count() \
         .reset_index().groupby('STR Company')['STR Number'].sum().reset_index()
 
     df4 = pd.merge(df2, df3, on='STR Company', how='inner')
     df4.rename(columns={'STR Number': 'StoresCount', 'SKU Store Grade': 'Plu_Grade'}, inplace=True)
 
     df4['GradeStores'] = np.where(df4.Plu_Grade == 2,
-                                  df4.StoresCount * g2,
+                                  df4.StoresCount * Grade2,
                                   np.where(df4.Plu_Grade == 3,
-                                           df4.StoresCount * g3,
+                                           df4.StoresCount * Grade3,
                                            df4.StoresCount))
 
     df4 = df4[['Option', 'STR Company', 'Plu_Grade', 'StoresCount', 'GradeStores']]
@@ -1114,3 +1086,90 @@ def calcScoringMD(df_score, MD_Tier1, MD_Tier2):
     df1 = df1[['Option', 'MD Score', 'MD_SLS']]
 
     return df1
+
+#######################################################
+def getPath():
+    if getattr(sys, 'frozen', False):
+        SETTINGS_PATH = os.path.dirname(sys.executable)
+    else:
+        SETTINGS_PATH = os.path.dirname(os.path.abspath(__file__))
+
+    with open(SETTINGS_PATH + "\Settings.txt", "r") as file:
+        first_line = file.readline()
+
+    while first_line[-4:] != 'xlsm':
+        first_line = first_line[:-1]
+    return first_line
+
+def getParameters(MODEL_PATH): #MODEL_PATH
+
+    df = pd.read_excel(MODEL_PATH, sheet_name='py_inputs', skiprows=1)
+    df = df[['Variables Header', 'Chosen Variables']]
+    param_names = ['Hierarchy','Departament','Grading Type','Week From','Week To','Minimum Sales Units','MinTotSls','MinStrStk','StrCount','WeekExcl',
+                 'E Merch Group Duration','W Merch Group Duration','S Merch Group Duration','Path Inventory','Grade2','Grade3']
+
+    param_values = list()
+    for idx in range(len(param_names)):
+        param_value = df[df['Variables Header'] == param_names[idx]]['Chosen Variables'].item()
+        param_values.append(param_value)
+
+    variables = dict(zip(param_names, param_values))
+
+    return variables
+
+def saveStatus(MODEL_PATH, SHEET_NAME, HIER, DF):
+    wb = xw.Book(MODEL_PATH) # xw.Book.caller()
+    ws = wb.sheets[SHEET_NAME]
+    ws.range("B1").value = HIER
+    ws.range("B2").value = DF
+
+def saveData(df,path):
+
+    table_list = [df]
+    for table in range(len(table_list)):
+        cols = changeColumnName(table_list[table].columns)
+        table_list[table].columns = cols
+    df.to_csv(path + "\\" + 'Grading.csv', index=False)
+
+
+
+##########################
+"""
+##########################################
+OLD Functions#############################
+
+def NotNeeded1():
+    wb = xw.Book.caller()
+    #ws = wb.sheets["notes"]
+    ws = wb.sheets['py_inputs']
+
+    # ws.range("C9").value = "Parameters"
+    # ws.range("D9").value = "Not Ready"
+    # ws.range("E9").value = datetime.datetime.now()
+    fileName = ws["O20"].value
+
+    df = pd.read_excel(fileName, sheet_name='py_inputs', skiprows=1,
+                       usecols=['Variables Header', 'Chosen Variables'],converters={'Variables Header':str,'Chosen Variables':str})
+    df.dropna(inplace=True)
+    df.reset_index(drop=True, inplace=True)
+
+    #ws.range("C11").value = df
+    #ws.range("G9").value = df.loc[df['Variables Header']=='Week To','Chosen Variables'].values
+    # ws.range("F9").value = datetime.datetime.now()
+    # ws.range("D9").value = "Ready"
+    return df
+
+##########################################
+def showGrades_old(df):
+    columnNames = ['Grade', 'Cut-Off (Count / Value)']
+    df = df[-3:].copy()
+    df.columns = columnNames
+    df['Grade'] = df.loc[:, ('Grade')].str.replace('Grade', '').astype(int)
+
+    grades = list()
+    for x in df.iloc[:, 1]:
+        grades.append(x)
+
+    return float(grades[1]), float(grades[2])
+    
+"""
