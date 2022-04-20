@@ -4,6 +4,7 @@ import os
 import daxQueries as daxQ
 import datetime
 import time
+from openpyxl import load_workbook
 import xlwings as xw
 import sys
 from sys import path
@@ -1106,7 +1107,7 @@ def getParameters(MODEL_PATH): #MODEL_PATH
     df = pd.read_excel(MODEL_PATH, sheet_name='py_inputs', skiprows=1)
     df = df[['Variables Header', 'Chosen Variables']]
     param_names = ['Hierarchy','Departament','Grading Type','Week From','Week To','Minimum Sales Units','MinTotSls','MinStrStk','StrCount','WeekExcl',
-                 'E Merch Group Duration','W Merch Group Duration','S Merch Group Duration','Path Inventory','Grade2','Grade3']
+                 'E Merch Group Duration','W Merch Group Duration','S Merch Group Duration','Path','Path Inventory','Grade2','Grade3']
 
     param_values = list()
     for idx in range(len(param_names)):
@@ -1117,22 +1118,64 @@ def getParameters(MODEL_PATH): #MODEL_PATH
 
     return variables
 
-def saveStatus(MODEL_PATH, SHEET_NAME, HIER, DF):
+def saveSummary(MODEL_PATH, SHEET_NAME, DF):
     wb = xw.Book(MODEL_PATH) # xw.Book.caller()
     ws = wb.sheets[SHEET_NAME]
-    ws.range("B1").value = HIER
     ws.range("B2").value = DF
 
-def saveData(df,path):
+def saveStatus(MODEL_PATH, INSIGHT, VALUE, VALUE_TOTAL):
+    STATUS_NO = VALUE + 1
 
-    table_list = [df]
-    for table in range(len(table_list)):
-        cols = changeColumnName(table_list[table].columns)
-        table_list[table].columns = cols
-    df.to_csv(path + "\\" + 'Grading.csv', index=False)
+    wb = xw.Book(MODEL_PATH)
+    ws = wb.sheets['QueryPar']
+    ws.range("E10").value = INSIGHT
+    ws.range("E14").value = STATUS_NO/VALUE_TOTAL
+
+    if STATUS_NO == VALUE_TOTAL:
+        ws.range("E16").value = 'Ready'
+    else:
+        ws.range("E16").value = 'Not Ready'
+
+def saveStatusNew(MODEL_PATH, df):
+    wb = load_workbook(MODEL_PATH)
+    ws = wb["Summary"]
+    ws["A1"] = df
+
+    wb.save(MODEL_PATH)
 
 
+def showStatusModel(path,y_n,dep,hier,status, value,value_total):
+    """
+    0 status means: NOT busy. Inventory file is ready;
+    showStatus(path, 0, dep=None, hier=None, week=None)
+    :param path:
+    :param y_n:
+    :param dep:
+    :param hier:
+    :param week:
+    :return:
+    """
+    PROGRESS = "{0:.0f}%".format(value/value_total * 100)
 
+    if y_n == 1:
+        if os.path.exists(path + "Ready.txt"):
+            os.remove(path + "Ready.txt")
+
+        file = open(path + "Not Ready.txt", "w")
+        file.write(f"Data are still downloading...\n\n"
+                   f"Department: {dep}\n"
+                   f"Hierarchy: {hier}\n"
+                   f"Status: {status}\n"
+                   f"Progress: {PROGRESS}%")
+        file.close()
+    else:
+        if os.path.exists(path + "Not Ready.txt"):
+            os.remove(path + "Not Ready.txt")
+
+        file = open(path + "Ready.txt", "w")
+        file.write("Data have been downloaded")
+
+        file.close()
 ##########################
 """
 ##########################################
