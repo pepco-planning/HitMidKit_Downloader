@@ -1,23 +1,22 @@
 ############################################################################################
 # Import Files
 import HitMidKit_Functions as func
-import daxQueries as dax
+import HitMidKit_DAX as dax
 import pandas as pd
 import numpy as np
 
 def calculateSummary():
-    STATUS_NO = 0
     STATUS_TOTAL_NO = 9 # this value need tp be fix
+    MODEL, MODEL_PATH = func.getPath()
 
-    func.saveStatus(func.getPath(), 'Getting Parameters', STATUS_NO, STATUS_TOTAL_NO)
-    PARAMETERS  = func.getParameters(func.getPath())
+    PARAMETERS  = func.getParameters(MODEL)
 
-    func.saveStatus(func.getPath(), 'Opening Inventory', 2)
+    func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'], 'Downloading Inventory...',1,STATUS_TOTAL_NO)
     df_Inventory = pd.read_csv(PARAMETERS['Path Inventory'] + "\\" + f"{PARAMETERS['Hierarchy']}_HitMidKit.csv")
 
     ############################################################################################
     # variable for DAX
-    func.saveStatus(func.getPath(), 'Download Reports from Database', 3)
+    func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'], 'Downloading Reports...',2,STATUS_TOTAL_NO)
     df_Grading = func.dataFrameFromTabular(dax.grading(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament']))
     df_Markdown = func.dataFrameFromTabular(dax.md(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament'],PARAMETERS['Minimum Sales Units']))
     df_Pcal = func.dataFrameFromTabular(dax.pcal(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament']))
@@ -32,7 +31,8 @@ def calculateSummary():
     ############################################################################################
     # Data Transformation
     # Changing column names. Remove Characters such as '[', ']'
-    func.saveStatus(func.getPath(), 'Data Transformation', 4)
+    func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'],
+                         'Data Transformation...', 3, STATUS_TOTAL_NO)
     table_list = [df_Grading,df_Markdown,df_Pcal,df_Perf,df_Plu_available,df_Prh,df_Prh_data,df_Promo_reg,df_Promo_tv,df_Sku_plu]
     for table in range(len(table_list)):
         cols = func.changeColumnName(table_list[table].columns)
@@ -72,7 +72,6 @@ def calculateSummary():
     ############################################################################################
     # CALCULATIONS
     # Add weeks and gradings
-    func.saveStatus(func.getPath(), 'Finalizing Inventory Table', 5)
     df_inv = func.addWeekKey(func.addCountry(df_Inventory, df_Grading, float(PARAMETERS['Grade2']), float(PARAMETERS['Grade3']),PARAMETERS['Grading Type']), df_Pcal)
 
     # Add "Plu Available" to the main table
@@ -115,10 +114,13 @@ def calculateSummary():
 ########################
     """SECOND PART OF THE MODEL - thing how to save the first part to avoid running it every time..."""
     # Aggregation - Option level
-    func.saveStatus(func.getPath(), 'Aggregation per Option', 6)
+    func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'],
+                         'Data Aggregation...', 4, STATUS_TOTAL_NO)
     df6 = func.InventoryAggregation(df4, df_Sku_plu, WeekMin, WeekMax,
                                     int(PARAMETERS['E Merch Group Duration']),int(PARAMETERS['W Merch Group Duration']),int(PARAMETERS['S Merch Group Duration']))
 
+    func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'],
+                         'ROS Calculations...', 5, STATUS_TOTAL_NO)
     avgROS, avgROS_Ratio = func.grade_multiEquivalentU(df4, df_Sku_plu, int(PARAMETERS['MinTotSls']))
     avgROSV, avgROS_RatioV = func.grade_multiEquivalentV(df4, df_Sku_plu, int(PARAMETERS['MinTotSls']))
 
@@ -127,7 +129,6 @@ def calculateSummary():
     df6 = pd.merge(df6, df_sellThru, on=['Option','SKU Store Grade'], how='left')
 
     # Finalization ROS *2
-    func.saveStatus(func.getPath(), 'ROS Calculation', 7)
     df6['Final ROS_U'] = np.where(df6['SKU Store Grade']==2,
                                    df6['Promo Adjusted ROS'] / avgROS_RatioV['2'][0],
                                    np.where(df6['SKU Store Grade']==3,
@@ -187,7 +188,8 @@ def calculateSummary():
     df_final['ROS Margin Value'] = df_final['Final ROS_V'] / df_final['VAT'] * df_final['Sales Margin']
 
     # # Scoring A
-    func.saveStatus(func.getPath(), 'Scoring Calculation', 8)
+    func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'],
+                         'Scoring Calculations...', 6, STATUS_TOTAL_NO)
     df_perf, ST_Tier_1, ST_Tier_2, MD_Tier1, MD_Tier2 = func.calcPerf(df_Perf,PARAMETERS['Hierarchy'])
 
     score_cols = ['Option','SKU Merch Type','ItemExcl','Sales Value','Final ROS_V', 'ROS Margin Value', 'Avg Sell-Through In Period',
@@ -235,10 +237,11 @@ def calculateSummary():
     else:
         cols = ['Option','ROS Score','ST Score','MD Score','MD_SLS','TOTAL SCORE','HIT / KIT / MID']
 
-    func.saveStatus(func.getPath(), 'Saving Summary', 9)
     df_final = pd.merge(df_final, df_score2[cols], on='Option', how='inner')
 
     # Change the name in the code above in a free time
+    func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'],
+                         'Finalizing Data...', 7, STATUS_TOTAL_NO)
     df_final.rename(columns={'SKU Sub Department':'Sub Department','SKU Category':'Category','Final ROS_U':'ROS FINAL',
                              'Final ROS_V':'ROS Value FINAL','SKU PPL Initial Retail Price':'Initial Price',
                              'SKU Store Grade':'Grade','Sales Margin':'Sales Margin %','Avg Sell-Through In Period':'Sell-Through in Period',
@@ -267,8 +270,12 @@ def calculateSummary():
     else:
         df_final = df_final[clothing_cols]
 
-    func.saveSummary(func.getPath(), 'Summary', df_final)
-    #return df_final
+    func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'],
+                         'Saving Data...', 8, STATUS_TOTAL_NO)
+
+    df_final.to_excel(MODEL_PATH + f"\Summary_{PARAMETERS['Hierarchy']}.xlsx",index=False)
+    func.showStatusModel(MODEL_PATH, 0, dep=None, hier=None, status=None,value=STATUS_TOTAL_NO,value_total=STATUS_TOTAL_NO)
+
 
 calculateSummary()
 
