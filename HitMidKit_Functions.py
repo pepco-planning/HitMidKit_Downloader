@@ -90,11 +90,13 @@ def showStatusModel(path,y_n,dep,hier,status, value,value_total):
             os.remove(path + r"\Ready.txt")
 
         file = open(path + r"\Not Ready.txt", "w")
-        file.write(f"Data are still downloading...\n\n"
-                   f"Department: {dep}\n"
-                   f"Hierarchy: {hier}\n"
-                   f"Status: {status}\n"
-                   f"Progress: {PROGRESS}\n"
+        # file.write(f"Data are still downloading...\n\n"
+        #            f"Department: {dep}\n"
+        #            f"Hierarchy: {hier}\n"
+        #            f"Status: {status}\n"
+        #            f"Progress: {PROGRESS}\n"
+        #            f"{value/value_total}")
+        file.write(f"{status}\n"
                    f"{value/value_total}")
         file.close()
     else:
@@ -105,6 +107,15 @@ def showStatusModel(path,y_n,dep,hier,status, value,value_total):
         file.write("Data have been downloaded")
 
         file.close()
+
+def dbExist(path,fileName):
+
+    if os.path.exists(path + f"\Database_{fileName}.csv"):
+        DB_EXIST = True
+    else:
+        DB_EXIST = False
+    return DB_EXIST
+
 
 ###################################
 #Model Functions - Calculation
@@ -1007,7 +1018,7 @@ def showStatus(path,y_n,dep,hier,week):
             os.remove(path + "Ready.txt")
 
         file = open(path + "Not Ready.txt", "w")
-        file.write(f"Data are still downloading...\n\n"
+        file.write(f"Data are still downloading\n\n"
                    f"Department: {dep}\n"
                    f"Hierarchy: {hier}\n"
                    f"Week: {week}")

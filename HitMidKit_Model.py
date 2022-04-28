@@ -1,22 +1,22 @@
 ############################################################################################
-# Import Files
 import HitMidKit_Functions as func
 import HitMidKit_DAX as dax
 import pandas as pd
 import numpy as np
 
-def calculateSummary():
+############################################################################################
+def calculateHitMidKit():
     STATUS_TOTAL_NO = 9 # this value need tp be fix
     MODEL, MODEL_PATH = func.getPath()
 
     PARAMETERS  = func.getParameters(MODEL)
 
-    func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'], 'Downloading Inventory...',1,STATUS_TOTAL_NO)
+    func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'], 'Downloading Inventory',1,STATUS_TOTAL_NO)
     df_Inventory = pd.read_csv(PARAMETERS['Path Inventory'] + "\\" + f"{PARAMETERS['Hierarchy']}_HitMidKit.csv")
 
     ############################################################################################
     # variable for DAX
-    func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'], 'Downloading Reports...',2,STATUS_TOTAL_NO)
+    func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'], 'Downloading Reports',2,STATUS_TOTAL_NO)
     df_Grading = func.dataFrameFromTabular(dax.grading(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament']))
     df_Markdown = func.dataFrameFromTabular(dax.md(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament'],PARAMETERS['Minimum Sales Units']))
     df_Pcal = func.dataFrameFromTabular(dax.pcal(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament']))
@@ -32,7 +32,7 @@ def calculateSummary():
     # Data Transformation
     # Changing column names. Remove Characters such as '[', ']'
     func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'],
-                         'Data Transformation...', 3, STATUS_TOTAL_NO)
+                         'Data Transformation', 3, STATUS_TOTAL_NO)
     table_list = [df_Grading,df_Markdown,df_Pcal,df_Perf,df_Plu_available,df_Prh,df_Prh_data,df_Promo_reg,df_Promo_tv,df_Sku_plu]
     for table in range(len(table_list)):
         cols = func.changeColumnName(table_list[table].columns)
@@ -115,12 +115,12 @@ def calculateSummary():
     """SECOND PART OF THE MODEL - thing how to save the first part to avoid running it every time..."""
     # Aggregation - Option level
     func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'],
-                         'Data Aggregation...', 4, STATUS_TOTAL_NO)
+                         'Data Aggregation', 4, STATUS_TOTAL_NO)
     df6 = func.InventoryAggregation(df4, df_Sku_plu, WeekMin, WeekMax,
                                     int(PARAMETERS['E Merch Group Duration']),int(PARAMETERS['W Merch Group Duration']),int(PARAMETERS['S Merch Group Duration']))
 
     func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'],
-                         'ROS Calculations...', 5, STATUS_TOTAL_NO)
+                         'ROS Calculations', 5, STATUS_TOTAL_NO)
     avgROS, avgROS_Ratio = func.grade_multiEquivalentU(df4, df_Sku_plu, int(PARAMETERS['MinTotSls']))
     avgROSV, avgROS_RatioV = func.grade_multiEquivalentV(df4, df_Sku_plu, int(PARAMETERS['MinTotSls']))
 
@@ -171,7 +171,6 @@ def calculateSummary():
                                np.where(df8['Promo_tv']==1,3,
                                         np.where(df8['Effective Weeks']<=(0.4*df8['Weeks In Period']),4,0)))
 
-
     # Leave just required columns in a table
     cols_inv = ['Option', 'SKU Store Grade', 'Sales Units', 'Sales Value','Sales Units in Period',
                 'Sales Units in Period Promo','Sales Units in Period Regular','Sales Value in Period',
@@ -179,17 +178,18 @@ def calculateSummary():
                 'GradeStores', 'Week Start', 'Week End', 'Promo Start', 'Promo End','% Total Sales Value',
                 '% Total Sales Units', 'ROS_ProdGrade', 'ROS_ProdGradeV','Promo Adjusted ROS','Promo Adjusted ROS V',
                 'Final ROS_U', 'Final ROS_V','Sell-Through', 'Sell-Through In Period', 'Avg Sell-Through In Period',
-                'Markdown Value','MD_ratio','Multi','ItemExcl','NonPromo ROS', 'Promo ROS'] #, 'ItemExcl'
+                'Markdown Value','MD_ratio','Multi','ItemExcl','NonPromo ROS', 'Promo ROS']
 
-    cols_sku = ['SKU Sub Department','SKU Category','SKU Merch Type','SKU Name',
-                'SKU PPL Initial Retail Price','Sales Margin','Option', 'VAT']
+    cols_sku = ['SKU Sub Department','SKU Name','SKU Category','SKU Merch Group', 'SKU Merch Season Type',
+                'SKU Merch To Season', 'SKU Merch Type', 'SKU PPL Initial Retail Price','Sales Margin','Option', 'VAT']
+
 
     df_final = pd.merge(df8[cols_inv],df_Sku_plu[cols_sku],on='Option', how='inner')
     df_final['ROS Margin Value'] = df_final['Final ROS_V'] / df_final['VAT'] * df_final['Sales Margin']
 
     # # Scoring A
     func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'],
-                         'Scoring Calculations...', 6, STATUS_TOTAL_NO)
+                         'Scoring Calculations', 6, STATUS_TOTAL_NO)
     df_perf, ST_Tier_1, ST_Tier_2, MD_Tier1, MD_Tier2 = func.calcPerf(df_Perf,PARAMETERS['Hierarchy'])
 
     score_cols = ['Option','SKU Merch Type','ItemExcl','Sales Value','Final ROS_V', 'ROS Margin Value', 'Avg Sell-Through In Period',
@@ -241,7 +241,7 @@ def calculateSummary():
 
     # Change the name in the code above in a free time
     func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'],
-                         'Finalizing Data...', 7, STATUS_TOTAL_NO)
+                         'Finalizing Data', 7, STATUS_TOTAL_NO)
     df_final.rename(columns={'SKU Sub Department':'Sub Department','SKU Category':'Category','Final ROS_U':'ROS FINAL',
                              'Final ROS_V':'ROS Value FINAL','SKU PPL Initial Retail Price':'Initial Price',
                              'SKU Store Grade':'Grade','Sales Margin':'Sales Margin %','Avg Sell-Through In Period':'Sell-Through in Period',
@@ -251,35 +251,37 @@ def calculateSummary():
                              'Stock Units in Period':'Closing Stock Units','ST Score':'Sell-Through Score','MD_SLS':'MD % SLS',
                             'Markdown Value':'MD Retail'},
                inplace = True)
-    hardline_cols = ['Sub Department','Category','Option','SKU Name','Multi','SKU Merch Type','Initial Price','Grade',
-                         'Sales Margin %','Promo Start','Promo End','Week Start','Week End','Sales Value','Sales Units',
-                         'Sales Value in Period','Sales Units in Period','% Total Sales Value','% Total Sales Units',
-                         'Promo Sales Value in Period','Promo Sales Units in Period','RAW ROS (excludes MD)','NonPromo ROS',
-                         'Promo ROS','Promo Adjusted ROS','ROS FINAL','RAW ROS Value (excludes MD)','Promo Adjusted ROS Value',
-                         'ROS Value FINAL','ROS Score','ROS Margin Value','ROS Margin Score','Closing Stock Units',
-                         'Sell-Through in Period','Sell-Through Score','TOTAL SCORE','HIT / KIT / MID','ItemExcl']
-    clothing_cols = ['Sub Department','Category','Option','SKU Name','Multi','Initial Price','Grade',
-                         'Sales Margin %','Promo Start','Promo End','Week Start','Week End','Sales Value','Sales Units',
-                         'Sales Value in Period','Sales Units in Period','% Total Sales Value','% Total Sales Units',
-                         'Promo Sales Value in Period','Promo Sales Units in Period','RAW ROS (excludes MD)','NonPromo ROS',
-                         'Promo ROS','Promo Adjusted ROS','ROS FINAL','RAW ROS Value (excludes MD)','Promo Adjusted ROS Value',
-                         'ROS Value FINAL','ROS Score','Closing Stock Units','Sell-Through in Period','Sell-Through Score',
-                         'MD Retail','MD % SLS','MD Score','TOTAL SCORE','HIT / KIT / MID','ItemExcl']
+    hardline_cols = ['Sub Department','Category','Option','SKU Name','Multi','SKU Merch Group', 'SKU Merch Season Type', 'SKU Merch To Season',
+                     'SKU Merch Type','Initial Price','Grade','Sales Margin %','Promo Start','Promo End','Week Start','Week End','Sales Value','Sales Units',
+                     'Sales Value in Period','Sales Units in Period','% Total Sales Value','% Total Sales Units',
+                     'Promo Sales Value in Period','Promo Sales Units in Period','RAW ROS (excludes MD)','NonPromo ROS',
+                     'Promo ROS','Promo Adjusted ROS','ROS FINAL','RAW ROS Value (excludes MD)','Promo Adjusted ROS Value',
+                     'ROS Value FINAL','ROS Score','Closing Stock Units','Sell-Through in Period','Sell-Through Score',
+                     'ROS Margin Value','ROS Margin Score','TOTAL SCORE','HIT / KIT / MID','ItemExcl']
+
+    clothing_cols = ['Sub Department','Category','Option','SKU Name','Multi','SKU Merch Group', 'SKU Merch Season Type', 'SKU Merch To Season',
+                     'SKU Merch Type','Initial Price','Grade','Sales Margin %','Promo Start','Promo End','Week Start','Week End','Sales Value','Sales Units',
+                     'Sales Value in Period','Sales Units in Period','% Total Sales Value','% Total Sales Units',
+                     'Promo Sales Value in Period','Promo Sales Units in Period','RAW ROS (excludes MD)','NonPromo ROS',
+                     'Promo ROS','Promo Adjusted ROS','ROS FINAL','RAW ROS Value (excludes MD)','Promo Adjusted ROS Value',
+                     'ROS Value FINAL','ROS Score','Closing Stock Units','Sell-Through in Period','Sell-Through Score',
+                     'MD Retail','MD % SLS','MD Score','TOTAL SCORE','HIT / KIT / MID','ItemExcl']
     if PARAMETERS['Hierarchy'][2] == '2':
         df_final = df_final[hardline_cols]
     else:
         df_final = df_final[clothing_cols]
 
     func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'],
-                         'Saving Data...', 8, STATUS_TOTAL_NO)
+                         'Saving Data', 8, STATUS_TOTAL_NO)
 
     df_final.to_excel(MODEL_PATH + f"\Summary_{PARAMETERS['Hierarchy']}.xlsx",index=False)
+    #df4.to_csv(MODEL_PATH + f"\Database_{PARAMETERS['Hierarchy']}.csv", index=False)
+    df8.to_csv(MODEL_PATH + f"\Database_{PARAMETERS['Hierarchy']}.csv", index=False)
+    #df_Sku_plu.to_csv(MODEL_PATH + f"\Sku_plu_{PARAMETERS['Hierarchy']}.csv", index=False)
     func.showStatusModel(MODEL_PATH, 0, dep=None, hier=None, status=None,value=STATUS_TOTAL_NO,value_total=STATUS_TOTAL_NO)
 
-
-calculateSummary()
-
-#df.to_excel(r'c:\Mariusz\MyProjects\HitMidKit_Downloader\workbook\file.xlsx',index=False)
+############################################################################################
+calculateHitMidKit()
 
 ############################################################################################
 # QUESTIONS
