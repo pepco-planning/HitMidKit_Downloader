@@ -705,9 +705,10 @@ def calcScoringSellThru(df_score, ST_Tier_1, ST_Tier_2):
 
         # df_temp['Cumm%'] = round(df_temp['RankX']/df_temp['RankX'].max(),2)
 
-        df_temp['ST Value'] = np.where(df_temp['RankX'] <= np.ceil(ST_Tier_1 * df_temp['ItemCountMer']), 'Tier1_V',
+        df_temp['ST Value'] = np.where(df_temp['RankX'] <= np.ceil(ST_Tier_1 * df_temp['ItemCountMer']),
+                                       'ST Tier 1 Calc',
                                        np.where(df_temp['RankX'] <= np.ceil(ST_Tier_2 * df_temp['ItemCountMer']),
-                                                'Tier2_V', '-'))
+                                                'ST Tier 2 Calc', '-'))
         df_temp = df_temp[df_temp['ST Value'] != '-']
         df1 = df1.append(df_temp)
 
@@ -719,11 +720,11 @@ def calcScoringSellThru(df_score, ST_Tier_1, ST_Tier_2):
                          aggfunc='mean').reset_index()
 
     df = pd.merge(df_score[['Option', 'MerchGroup', 'Avg Sell-Through In Period']], df2, on='MerchGroup', how='inner')
-    df['ST Score'] = np.where(df['Avg Sell-Through In Period'] >= df['Tier1_V'], 1,
-                              np.where(df['Avg Sell-Through In Period'] >= df['Tier2_V'], 0.5, 0))
+    df['ST Score'] = np.where(df['Avg Sell-Through In Period'] >= df['ST Tier 1 Calc'], 1,
+                              np.where(df['Avg Sell-Through In Period'] >= df['ST Tier 2 Calc'], 0.5, 0))
     df = df[['Option', 'ST Score']]
 
-    return df
+    return df, df2.rename_axis(None, axis=1)  # [['MerchGroup','Tier1_V','Tier2_V']]
 
 def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
     """
@@ -745,11 +746,12 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
             df_temp['RankX'] = np.arange(df_temp.shape[0]) + 1
             # df_temp['Cumm%'] = round(df_temp['RankX']/df_temp['RankX'].max(),2)
             df_temp[score_valueA] = np.where(df_temp['RankX'] <= np.ceil(df_temp['Tier1'] * df_temp['ItemCountDep']),
-                                             'Tier1_V',
+                                             'ROS_V_Tier1',
                                              np.where(df_temp['RankX'] <= np.ceil(
-                                                 df_temp['Tier2'] * df_temp['ItemCountDep']), 'Tier2_V',
+                                                 df_temp['Tier2'] * df_temp['ItemCountDep']), 'ROS_V_Tier2',
                                                       np.where(df_temp['RankX'] <= np.ceil(
-                                                          df_temp['Tier3'] * df_temp['ItemCountDep']), 'Tier3_V', '-')))
+                                                          df_temp['Tier3'] * df_temp['ItemCountDep']), 'ROS_V_Tier3',
+                                                               '-')))
 
             df_temp = df_temp[df_temp[score_valueA] != '-']
             df1 = df1.append(df_temp)
@@ -765,9 +767,9 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
 
         df = pd.merge(df_score[['Option', 'SKU Sub Department', score_variable]], df2, on='SKU Sub Department',
                       how='inner')
-        df[score_valueB] = np.where(df[score_variable] >= df['Tier1_V'], 1.5,
-                                    np.where(df[score_variable] >= df['Tier2_V'], 1,
-                                             np.where(df[score_variable] >= df['Tier3_V'], 0.5, 0)))
+        df[score_valueB] = np.where(df[score_variable] >= df['ROS_V_Tier1'], 1.5,
+                                    np.where(df[score_variable] >= df['ROS_V_Tier2'], 1,
+                                             np.where(df[score_variable] >= df['ROS_V_Tier3'], 0.5, 0)))
         df = df[['Option', score_valueB]]
 
         ################################################
@@ -782,9 +784,9 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
             df_temp['RankX'] = np.arange(df_temp.shape[0]) + 1
             # df_temp['Cumm%'] = round(df_temp['RankX']/df_temp['RankX'].max(),2)
             df_temp[score_valueA] = np.where(df_temp['RankX'] <= np.ceil(df_temp['SlsTier1'] * df_temp['ItemCountDep']),
-                                             'Tier1_V',
+                                             'ROS_V_Tier1',
                                              np.where(df_temp['RankX'] <= np.ceil(
-                                                 df_temp['SlsTier2'] * df_temp['ItemCountDep']), 'Tier2_V', '-'))
+                                                 df_temp['SlsTier2'] * df_temp['ItemCountDep']), 'ROS_V_Tier2', '-'))
 
             df_temp = df_temp[df_temp[score_valueA] != '-']
             df1 = df1.append(df_temp)
@@ -800,19 +802,13 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
 
         df = pd.merge(df_score[['Option', 'SKU Sub Department', score_variable]], df2, on='SKU Sub Department',
                       how='inner')
-        df[score_valueB] = np.where(df[score_variable] >= df['Tier1_V'], 1,
-                                    np.where(df[score_variable] >= df['Tier2_V'], 0.5, 0))
+        df[score_valueB] = np.where(df[score_variable] >= df['ROS_V_Tier1'], 1,
+                                    np.where(df[score_variable] >= df['ROS_V_Tier2'], 0.5, 0))
         df = df[['Option', score_valueB]]
 
-    return df
+    return df, df2.rename_axis(None, axis=1)  # [['SKU Sub Department','Tier1_V','Tier2_V']]
 
 def calcScoringMD(df_score, MD_Tier1, MD_Tier2):
-    """
-    score_variable = 'ROS Margin Value'
-    score_valueA = 'ST Value'
-    score_valueB = 'ST Score'
-    """
-
     colnames = ['Option', 'SKU Merch Type', 'MerchGroup', 'Sales Value', 'Markdown Value', 'SKU Sub Department',
                 'ItemCountMer']
     df1 = pd.DataFrame(columns=colnames)
@@ -823,17 +819,22 @@ def calcScoringMD(df_score, MD_Tier1, MD_Tier2):
         df_temp['MD_SLS'] = np.where(df_temp['Markdown Value'] > 0, np.where(df_temp['Sales Value'] > 0,
                                                                              df_temp['Markdown Value'] / df_temp[
                                                                                  'Sales Value'], 1), 0)
+        # new
+        try:
+            df_temp['MD Tier 1 Calc'] = df_temp['Markdown Value'].sum() / df_temp['Sales Value'].sum() * MD_Tier1
+            df_temp['MD Tier 2 Calc'] = df_temp['Markdown Value'].sum() / df_temp['Sales Value'].sum() * MD_Tier2
+        except ZeroDivisionError:
+            pass
 
         df1 = df1.append(df_temp)
 
-    Tier1_V = (df1['Markdown Value'].sum() / df1['Sales Value'].sum()) * MD_Tier1
-    Tier2_V = (df1['Markdown Value'].sum() / df1['Sales Value'].sum()) * MD_Tier2
+    df1['MD Score'] = np.where(df1['MD_SLS'] <= df1['MD Tier 1 Calc'], 1,
+                               np.where(df1['MD_SLS'] <= df1['MD Tier 2 Calc'], 0.5, 0))
 
-    df1['MD Score'] = np.where(df1['MD_SLS'] <= Tier1_V, 1, np.where(df1['MD_SLS'] <= Tier2_V, 0.5, 0))
-    df1 = df1[['Option', 'MD Score', 'MD_SLS']]
+    df = df1[['Option', 'MD Score', 'MD_SLS']].copy()
+    df2 = df1.groupby(['MerchGroup']).agg({'MD Tier 1 Calc': 'min', 'MD Tier 2 Calc': 'min'}).reset_index()
 
-    return df1
-
+    return df, df2
 ###################################
 #Inventory Downloader Functions
 ###################################

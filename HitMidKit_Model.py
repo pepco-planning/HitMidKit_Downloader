@@ -187,7 +187,7 @@ def calculateHitMidKit():
     df_final = pd.merge(df8[cols_inv],df_Sku_plu[cols_sku],on='Option', how='inner')
     df_final['ROS Margin Value'] = df_final['Final ROS_V'] / df_final['VAT'] * df_final['Sales Margin']
 
-    # # Scoring A
+    # # Scoring A / KPI_Overwrite
     func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'],
                          'Scoring Calculations', 6, STATUS_TOTAL_NO)
     df_perf, ST_Tier_1, ST_Tier_2, MD_Tier1, MD_Tier2 = func.calcPerf(df_Perf,PARAMETERS['Hierarchy'])
@@ -209,10 +209,10 @@ def calculateHitMidKit():
     ros_list = ['Final ROS_V','ROS Value','ROS Score']
     margin_list = ['ROS Margin Value','Margin Value','Margin Score']
 
-    df_ros = func.calcScoringROS(ros_list[0],ros_list[1],ros_list[2],df_score1,PARAMETERS['Hierarchy'])
-    df_margin = func.calcScoringROS(margin_list[0],margin_list[1],margin_list[2],df_score1,PARAMETERS['Hierarchy'])
-    df_st = func.calcScoringSellThru(df_score1,ST_Tier_1,ST_Tier_2)
-    df_md = func.calcScoringMD(df_score1,MD_Tier1,MD_Tier2)
+    df_ros, df_ros_kpi = func.calcScoringROS(ros_list[0],ros_list[1],ros_list[2],df_score1,PARAMETERS['Hierarchy'])
+    df_margin, df_margin_kpi = func.calcScoringROS(margin_list[0],margin_list[1],margin_list[2],df_score1,PARAMETERS['Hierarchy'])
+    df_st, df_st_kpi = func.calcScoringSellThru(df_score1,ST_Tier_1,ST_Tier_2)
+    df_md, df_md_kpi = func.calcScoringMD(df_score1,MD_Tier1,MD_Tier2)
     df_score2 = pd.merge(df_score1,df_ros,on='Option',how='left')
     df_score2 = pd.merge(df_score2,df_st,on='Option',how='left')
     df_score2 = pd.merge(df_score2,df_margin,on='Option',how='left')
@@ -221,21 +221,44 @@ def calculateHitMidKit():
     df_score2['MD_SLS'].fillna(0,inplace=True)
     df_score2['MD Score'] = np.where(df_score2['MD_SLS']==0,1,df_score2['MD Score'])
 
+    # KPI Overwrite
+    df_margin_kpi.rename(
+        columns={'ROS_V_Tier1': 'ROS_M_Tier1', 'ROS_V_Tier2': 'ROS_M_Tier2', 'ROS_V_Tier3': 'ROS_M_Tier3'},
+        inplace=True)
+
+    df_KPI_1 = pd.merge(df_ros_kpi, df_margin_kpi, on='SKU Sub Department', how='inner')
+    df_KPI_2 = pd.merge(df_st_kpi, df_md_kpi, on='MerchGroup', how='inner')
+    del df_ros_kpi, df_margin_kpi, df_st_kpi, df_md_kpi
+
     if PARAMETERS['Hierarchy'][2] == '2':
         df_score2['TOTAL SCORE'] = df_score2['ROS Score'] + df_score2['Margin Score'] + np.where(df_score2['SKU Merch Type']=="Y",0,df_score2['ST Score'])
 
         df_score2['HIT / KIT / MID'] = np.where((df_score2['SKU Merch Type']=="Y")&(df_score2['TOTAL SCORE']>=2.5),"01_HIT",
                                            np.where(df_score2['TOTAL SCORE']>=3,"01_HIT",
                                                    np.where(df_score2['TOTAL SCORE']>=1.5,"02_MID","03_KIT")))
+
+        # df_final columns
+        cols = ['Option', 'ROS Score', 'ST Score', 'Margin Score', 'TOTAL SCORE', 'HIT / KIT / MID']
+
+        # KPI Overwrite: tu dodaj cały df_KPI_1 (ROS/Ros Margin) + ST (bez MD)
+        df_KPI_1[['ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN', 'ROS_M_Tier1 MAN', 'ROS_M_Tier2 MAN']] = np.nan
+
+        df_KPI_2 = df_KPI_2[['MerchGroup', 'ST Tier 1 Calc', 'ST Tier 2 Calc']]
+        df_KPI_2[['ST Tier 1 MAN', 'ST Tier 2 MAN']] = np.nan
     else:
         df_score2['TOTAL SCORE'] = df_score2['ROS Score'] + df_score2['MD Score'] + df_score2['ST Score']
 
         df_score2['HIT / KIT / MID'] = np.where(df_score2['TOTAL SCORE']>2,"01_HIT",
                                                 np.where(df_score2['TOTAL SCORE']>1,"02_MID","03_KIT"))
-    if PARAMETERS['Hierarchy'][2] == '2':
-        cols = ['Option','ROS Score','ST Score','Margin Score','TOTAL SCORE','HIT / KIT / MID']
-    else:
-        cols = ['Option','ROS Score','ST Score','MD Score','MD_SLS','TOTAL SCORE','HIT / KIT / MID']
+
+        # df_final columns
+        cols = ['Option', 'ROS Score', 'ST Score', 'MD Score', 'MD_SLS', 'TOTAL SCORE', 'HIT / KIT / MID']
+
+        # KPI Overwrite: tu dodaj cały df_KPI_2 (ST/MD) + ROS V (bez Ros Margin)
+        df_KPI_1 = df_KPI_1[['SKU Sub Department', 'ROS_V_Tier1', 'ROS_V_Tier2']]
+        df_KPI_1[['ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN']] = np.nan
+
+        df_KPI_2[['ST Tier 1 MAN', 'ST Tier 2 MAN', 'MD Tier 1 MAN', 'MD Tier 2 MAN']] = np.nan
 
     df_final = pd.merge(df_final, df_score2[cols], on='Option', how='inner')
 
@@ -274,10 +297,12 @@ def calculateHitMidKit():
     func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'],
                          'Saving Data', 8, STATUS_TOTAL_NO)
 
+    # Saving outputs
     df_final.to_excel(MODEL_PATH + f"\Summary_{PARAMETERS['Hierarchy']}.xlsx",index=False)
-    #df4.to_csv(MODEL_PATH + f"\Database_{PARAMETERS['Hierarchy']}.csv", index=False)
     df8.to_csv(MODEL_PATH + f"\Database_{PARAMETERS['Hierarchy']}.csv", index=False)
-    #df_Sku_plu.to_csv(MODEL_PATH + f"\Sku_plu_{PARAMETERS['Hierarchy']}.csv", index=False)
+    df_KPI_1.to_csv(MODEL_PATH + f"\KPI_{PARAMETERS['Hierarchy']}.csv", index=False)
+    df_KPI_2.to_csv(MODEL_PATH + f"\KPI_{PARAMETERS['Hierarchy']}.csv", mode='a', index=False)
+
     func.showStatusModel(MODEL_PATH, 0, dep=None, hier=None, status=None,value=STATUS_TOTAL_NO,value_total=STATUS_TOTAL_NO)
 
 ############################################################################################
