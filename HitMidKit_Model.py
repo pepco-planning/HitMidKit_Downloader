@@ -231,25 +231,29 @@ def calculateHitMidKit():
     del df_ros_kpi, df_margin_kpi, df_st_kpi, df_md_kpi
 
     if PARAMETERS['Hierarchy'][2] == '2':
-        df_score2['TOTAL SCORE'] = df_score2['ROS Score'] + df_score2['Margin Score'] + np.where(df_score2['SKU Merch Type']=="Y",0,df_score2['ST Score'])
+        df_score2['TOTAL SCORE'] = df_score2['ROS Score'] + df_score2['Margin Score'] + np.where(
+            df_score2['SKU Merch Type'] == "Y", 0, df_score2['ST Score'])
 
-        df_score2['HIT / KIT / MID'] = np.where((df_score2['SKU Merch Type']=="Y")&(df_score2['TOTAL SCORE']>=2.5),"01_HIT",
-                                           np.where(df_score2['TOTAL SCORE']>=3,"01_HIT",
-                                                   np.where(df_score2['TOTAL SCORE']>=1.5,"02_MID","03_KIT")))
+        df_score2['HIT / KIT / MID'] = np.where(
+            (df_score2['SKU Merch Type'] == "Y") & (df_score2['TOTAL SCORE'] >= 2.5), "01_HIT",
+            np.where(df_score2['TOTAL SCORE'] >= 3, "01_HIT",
+                     np.where(df_score2['TOTAL SCORE'] >= 1.5, "02_MID", "03_KIT")))
 
         # df_final columns
         cols = ['Option', 'ROS Score', 'ST Score', 'Margin Score', 'TOTAL SCORE', 'HIT / KIT / MID']
 
         # KPI Overwrite: tu dodaj cały df_KPI_1 (ROS/Ros Margin) + ST (bez MD)
-        df_KPI_1[['ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN', 'ROS_M_Tier1 MAN', 'ROS_M_Tier2 MAN']] = np.nan
+        df_KPI_1[['ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN', 'ROS_V_Tier3 MAN',
+                  'ROS_M_Tier1 MAN', 'ROS_M_Tier2 MAN', 'ROS_M_Tier3 MAN']] = np.nan
 
         df_KPI_2 = df_KPI_2[['MerchGroup', 'ST Tier 1 Calc', 'ST Tier 2 Calc']]
+        df_KPI_2.rename(columns={'ST Tier 1 Calc':'ST Tier 1', 'ST Tier 2 Calc':'ST Tier 2'},inplace=True)
         df_KPI_2[['ST Tier 1 MAN', 'ST Tier 2 MAN']] = np.nan
     else:
         df_score2['TOTAL SCORE'] = df_score2['ROS Score'] + df_score2['MD Score'] + df_score2['ST Score']
 
-        df_score2['HIT / KIT / MID'] = np.where(df_score2['TOTAL SCORE']>2,"01_HIT",
-                                                np.where(df_score2['TOTAL SCORE']>1,"02_MID","03_KIT"))
+        df_score2['HIT / KIT / MID'] = np.where(df_score2['TOTAL SCORE'] > 2, "01_HIT",
+                                                np.where(df_score2['TOTAL SCORE'] > 1, "02_MID", "03_KIT"))
 
         # df_final columns
         cols = ['Option', 'ROS Score', 'ST Score', 'MD Score', 'MD_SLS', 'TOTAL SCORE', 'HIT / KIT / MID']

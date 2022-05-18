@@ -835,6 +835,54 @@ def calcScoringMD(df_score, MD_Tier1, MD_Tier2):
     df2 = df1.groupby(['MerchGroup']).agg({'MD Tier 1 Calc': 'min', 'MD Tier 2 Calc': 'min'}).reset_index()
 
     return df, df2
+
+def refreshKPI(df,hier):
+    # get KPI from excel file and transfor the dataframes
+    cols_hdl1 = ['SKU Sub Department', 'ROS_V_Tier1', 'ROS_V_Tier2', 'ROS_V_Tier3', 'ROS_M_Tier1', 'ROS_M_Tier2',
+                 'ROS_M_Tier3', 'ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN', 'ROS_V_Tier3 MAN',
+                 'ROS_M_Tier1 MAN', 'ROS_M_Tier2 MAN', 'ROS_M_Tier3 MAN']
+
+    cols_hdl2 = ['MerchGroup', 'ST Tier 1', 'ST Tier 2', 'ST Tier 1 MAN', 'ST Tier 2 MAN']
+
+    cols_clt1 = ['SKU Sub Department', 'ROS_V_Tier1', 'ROS_V_Tier2', 'ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN']
+
+    cols_clt2 = ['MerchGroup', 'ST Tier 1', 'ST Tier 2', 'MD Tier 1', 'MD Tier 2',
+                 'ST Tier 1 MAN', 'ST Tier 2 MAN', 'MD Tier 1 MAN', 'MD Tier 2 MAN']
+
+    if hier == 2:
+        df_kpi1 = df[:-4][cols_hdl1]
+        df_kpi1 = overwriteKPI(df_kpi1).iloc[:, :int(df_kpi1.shape[1] / 2 + 1)]
+
+        df_kpi2 = df[-3:]
+        df_kpi2.columns = df_kpi2.iloc[0]
+        df_kpi2 = df_kpi2[1:]
+        df_kpi2 = df_kpi2[cols_hdl2]
+        df_kpi2 = overwriteKPI(df_kpi2).iloc[:, :int(df_kpi2.shape[1] / 2 + 1)]
+    else:
+        df_kpi1 = df[:-4][cols_clt1]
+        df_kpi1 = overwriteKPI(df_kpi1).iloc[:, :int(df_kpi1.shape[1] / 2 + 1)]
+
+        df_kpi2 = df[-3:]
+        df_kpi2.columns = df_kpi2.iloc[0]
+        df_kpi2 = df_kpi2[1:]
+        df_kpi2 = df_kpi2[cols_clt2]
+        df_kpi2 = overwriteKPI(df_kpi2).iloc[:, :int(df_kpi2.shape[1] / 2 + 1)]
+
+    df_kpi1.rename(columns={'SKU Sub Department': 'Sub Department'}, inplace=True)
+
+    return df_kpi1, df_kpi2
+
+def overwriteKPI(df):
+    r = int((df.shape[1] - 1) / 2)
+    first_col = r + 1
+    last_col = int(df.shape[1])
+
+    for x in range(df.shape[0]):
+        for y in range(first_col,last_col):
+            if df.iloc[x,y] >= 0:
+                df.iloc[x,y-r] = df.iloc[x,y]
+    return df
+
 ###################################
 #Inventory Downloader Functions
 ###################################
