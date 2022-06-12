@@ -3,16 +3,26 @@ import HitMidKit_Functions as func
 import HitMidKit_DAX as dax
 import pandas as pd
 import numpy as np
+import pathlib
+import sys
 
 ############################################################################################
 def calculateHitMidKit():
     STATUS_TOTAL_NO = 9 # this value need tp be fix
     MODEL, MODEL_PATH = func.getPath()
 
-    PARAMETERS  = func.getParameters(MODEL)
+    #PARAMETERS  = func.getParameters(MODEL)
+    PARAMETERS = func.getParametersNew(MODEL_PATH + "\Parameters.csv")
+
+    file = pathlib.Path(f"{PARAMETERS['Path Inventory']}\\{PARAMETERS['Hierarchy']}_HitMidKit.csv")
+    if file.exists():
+        pass
+    else:
+        func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'], 'File not exist',8,STATUS_TOTAL_NO)
+        sys.exit()
 
     func.showStatusModel(MODEL_PATH, 1, PARAMETERS['Departament'], PARAMETERS['Hierarchy'], 'Downloading Inventory',1,STATUS_TOTAL_NO)
-    df_Inventory = pd.read_csv(PARAMETERS['Path Inventory'] + "\\" + f"{PARAMETERS['Hierarchy']}_HitMidKit.csv")
+    df_Inventory = pd.read_csv(f"{PARAMETERS['Path Inventory']}\\{PARAMETERS['Hierarchy']}_HitMidKit.csv")
 
     ############################################################################################
     # variable for DAX
@@ -128,11 +138,11 @@ def calculateHitMidKit():
                                    int(PARAMETERS['E Merch Group Duration']),int(PARAMETERS['W Merch Group Duration']),int(PARAMETERS['S Merch Group Duration']))
     df6 = pd.merge(df6, df_sellThru, on=['Option','SKU Store Grade'], how='left')
 
-    # Finalization ROS *2
+    # Finalization ROS
     df6['Final ROS_U'] = np.where(df6['SKU Store Grade']==2,
-                                   df6['Promo Adjusted ROS'] / avgROS_RatioV['2'][0],
+                                   df6['Promo Adjusted ROS'] / avgROS_Ratio['2'][0],
                                    np.where(df6['SKU Store Grade']==3,
-                                           df6['Promo Adjusted ROS'] / avgROS_RatioV['3'][0],
+                                           df6['Promo Adjusted ROS'] / avgROS_Ratio['3'][0],
                                            df6['Promo Adjusted ROS']))
     df6['Final ROS_V'] = np.where(df6['SKU Store Grade']==2,
                                    df6['Promo Adjusted ROS V'] / avgROS_RatioV['2'][0],
@@ -319,19 +329,9 @@ calculateHitMidKit()
 **Questions**
 Should the stores with no grades be taken into consideration?
 - Should we fill NaN values in StoreGrade column?
-- How to treat stores with Grade=0. Should we calculate for the only "Total Sales", "InStock/MinInStock"? <p>Currently, InStock does not calculate for Grade = 0 but the MinInStock does. Is it proper approach?
-
-df_final[(df_final['Sub Department']=='e Baskets and Boxes')&(df_final.ItemExcl==0)]['Option'].count()
-df_final.to_excel(f"Analysis/HMK_"+str(chosenHierarchy)+"_0413.xlsx",index=False)
-___
-**Question**
-
-Do we need units in promo_reg file? Why the values there are not equal with Inventory (Likely answer: "promo" shows sales only for promo products while in "Inventory" table just a part of the sales shows promo because the first day of promotion starts on Thursday)?
-**Final Questions**</p>
-- <p>W Data Model mamy błędne SKU Merch Group (note2/Hit Mid Kit_Analysis.xlsx).</p>
-- <p>Po co pokazywać wartości w ItemSummary dla produków takich jak "276636 Multicolor 5", czyli takich które nie mają określonego weekfrom/end i mają puste wiersze</p>
-- <p>Czy trzeba brać pod uwagę sklepy, których nie ma w pliku Grading.csv (note4/Hit Mid Kit_Analysis.xlsx)?</p>
-- <p>Po co brać pod uwagę PLU bez sprzedaży (brak w Inventory?)</p>
+- How to treat stores with Grade=0. Should we calculate for the only "Total Sales", "InStock/MinInStock"?
+- Currently, InStock does not calculate for Grade = 0 but the MinInStock does. Is it proper approach?
+- Po co brać pod uwagę PLU bez sprzedaży (brak w Inventory?)
     ['326220 Multicolor 5',
     '327847 Multicolor 5',
     '325537 Multicolor 5',
@@ -345,7 +345,7 @@ Do we need units in promo_reg file? Why the values there are not equal with Inve
     '312502 Black',
     '327085 Multicolor 5',
     '280429 Multicolor 5']
-- Sell Through if regular to 0
+
 - ItemExclusion: dodaj tę funkcję do df4 bo ratio/ros/promofactor liczą się dla ItemExcl=0
 - Jest opcja zmiany rosa (w data model "x") - dodaj to
 ---
@@ -366,7 +366,7 @@ InStock [In-Stock Stores] potrzebny do policzenia week start,
 InStockX [In-Stock Stores in Period] do wykluczenia z wybranych tyg najgorszych sklepów
 
 *2
-Tu poprawić należy avgROS_RatioV dla units na avgROS_Ratio. W Excel Modelu jest błąd.
+POPRAWIONO: avgROS_RatioV dla units na avgROS_Ratio. W Excel Modelu jest błąd (# Finalization ROS) 
 SKU PLU: ROS_AllStoreEquivalentu_PrAdj - MIN(Grades[RatioV]) zamień na MIN(Grades[Ratio])
 
 

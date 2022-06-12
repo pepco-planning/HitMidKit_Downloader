@@ -72,6 +72,21 @@ def getParameters(MODEL_PATH): #MODEL_PATH
 
     return variables
 
+def getParametersNew(MODEL_PATH): #MODEL_PATH
+
+    df = pd.read_csv(MODEL_PATH)
+    df = df[['Variables Header', 'Chosen Variables']]
+    param_names = list(df['Variables Header'])
+
+    param_values = list()
+    for idx in range(len(param_names)):
+        param_value = df[df['Variables Header'] == param_names[idx]]['Chosen Variables'].item()
+        param_values.append(param_value)
+
+    variables = dict(zip(param_names, param_values))
+
+    return variables
+
 def showStatusModel(path,y_n,dep,hier,status, value,value_total):
     """
     0 status means: NOT busy. Inventory file is ready;
@@ -629,9 +644,15 @@ def InventoryAggregation(df_inv, df_sku, WeekMin, WeekMax, eDur, wDur, sDur):
     ########################################################################
     # PromoFactor
     ROS_PerGrade_Promo = df1[df1['SKU Store Grade'] == 1]['Sales Units in Period Promo'].sum() / \
-                         df1[df1['SKU Store Grade'] == 1]['In-Stock Stores in Period Promo'].sum()
+                         np.where(
+                             df1[df1['SKU Store Grade'] == 1]['In-Stock Stores in Period Promo'].sum() == 0,
+                             1,
+                             df1[df1['SKU Store Grade'] == 1]['In-Stock Stores in Period Promo'].sum())
     ROS_PerGrade_Regular = df1[df1['SKU Store Grade'] == 1]['Sales Units in Period Regular'].sum() / \
-                           df1[df1['SKU Store Grade'] == 1]['In-Stock Stores in Period Regular'].sum()
+                           np.where(
+                               df1[df1['SKU Store Grade'] == 1]['In-Stock Stores in Period Regular'].sum() == 0,
+                               1,
+                               df1[df1['SKU Store Grade'] == 1]['In-Stock Stores in Period Regular'].sum())
     PromoFactor = ROS_PerGrade_Promo / ROS_PerGrade_Regular
 
     ########################################################################
@@ -667,8 +688,8 @@ def calcPerf(df, hier):
         df_perf['Tier3'] = np.where(df_perf['Sales Perf'] > 0.05, 0.8,
                                     np.where(df_perf['Sales Perf'] > -0.05, 0.75, 0.7))
 
-        Sales_Perf_Min = df_perf['Inflows ACT'].sum() / df_perf['Intake AP'].sum()
-        Sales_dep_Perf = df_perf['Sales Retail ACT'].sum() / (df_perf['Sales Retail AP'].sum() * Sales_Perf_Min) - 1
+        Sales_Perf_Min = df_perf['Inflows ACT'].sum() / np.where(df_perf['Intake AP'].sum() == 0, 1, df_perf['Intake AP'].sum())
+        Sales_dep_Perf = df_perf['Sales Retail ACT'].sum() / np.where((df_perf['Sales Retail AP'].sum() * Sales_Perf_Min) - 1 <= 0, 1, (df_perf['Sales Retail AP'].sum() * Sales_Perf_Min) - 1)
     ################################################
     # Clothing
     else:
@@ -720,11 +741,18 @@ def calcScoringSellThru(df_score, ST_Tier_1, ST_Tier_2):
                          aggfunc='mean').reset_index()
 
     df = pd.merge(df_score[['Option', 'MerchGroup', 'Avg Sell-Through In Period']], df2, on='MerchGroup', how='inner')
+
+    required_cols = ['Option', 'MerchGroup', 'Avg Sell-Through In Period', 'ST Tier 1 Calc', 'ST Tier 2 Calc']
+    df = pd.DataFrame(columns=required_cols, data=df)
     df['ST Score'] = np.where(df['Avg Sell-Through In Period'] >= df['ST Tier 1 Calc'], 1,
                               np.where(df['Avg Sell-Through In Period'] >= df['ST Tier 2 Calc'], 0.5, 0))
     df = df[['Option', 'ST Score']]
 
-    return df, df2.rename_axis(None, axis=1)  # [['MerchGroup','Tier1_V','Tier2_V']]
+    df2 = df2.rename_axis(None, axis=1)
+    required_cols = ['MerchGroup', 'ST Tier 1 Calc', 'ST Tier 2 Calc']
+    df2 = pd.DataFrame(columns=required_cols, data=df2)
+
+    return df, df2
 
 def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
     """
@@ -767,6 +795,9 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
 
         df = pd.merge(df_score[['Option', 'SKU Sub Department', score_variable]], df2, on='SKU Sub Department',
                       how='inner')
+
+        required_cols = ['Option', 'SKU Sub Department', 'ROS Margin Value','Final ROS_V', 'ROS_V_Tier1','ROS_V_Tier2','ROS_V_Tier3']
+        df = pd.DataFrame(columns=required_cols, data=df)
         df[score_valueB] = np.where(df[score_variable] >= df['ROS_V_Tier1'], 1.5,
                                     np.where(df[score_variable] >= df['ROS_V_Tier2'], 1,
                                              np.where(df[score_variable] >= df['ROS_V_Tier3'], 0.5, 0)))
@@ -802,6 +833,9 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
 
         df = pd.merge(df_score[['Option', 'SKU Sub Department', score_variable]], df2, on='SKU Sub Department',
                       how='inner')
+
+        required_cols = ['Option', 'SKU Sub Department', 'ROS Margin Value','Final ROS_V', 'ROS_V_Tier1','ROS_V_Tier2','ROS_V_Tier3']
+        df = pd.DataFrame(columns=required_cols, data=df)
         df[score_valueB] = np.where(df[score_variable] >= df['ROS_V_Tier1'], 1,
                                     np.where(df[score_variable] >= df['ROS_V_Tier2'], 0.5, 0))
         df = df[['Option', score_valueB]]

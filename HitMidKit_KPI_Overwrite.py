@@ -8,7 +8,8 @@ def refreshKPI():
 
     # Opening and transforming data
     MODEL, MODEL_PATH = func.getPath()
-    PARAMETERS  = func.getParameters(MODEL)
+    #PARAMETERS  = func.getParameters(MODEL)
+    PARAMETERS = func.getParametersNew(MODEL_PATH + "\Parameters.csv")
 
     df_ItemSummary = pd.read_excel(MODEL, sheet_name="ItemSummary")
     df_ItemSummary = df_ItemSummary.loc[:, ~df_ItemSummary.columns.str.contains('^Unnamed')]

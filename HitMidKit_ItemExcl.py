@@ -9,7 +9,8 @@ def refreshItemExcl():
 
     # Opening and transforming data
     MODEL, MODEL_PATH = func.getPath()
-    PARAMETERS  = func.getParameters(MODEL)
+    #PARAMETERS  = func.getParameters(MODEL)
+    PARAMETERS = func.getParametersNew(MODEL_PATH + "\Parameters.csv")
 
     df_db = pd.read_csv(MODEL_PATH + f"\Database_{PARAMETERS['Hierarchy']}.csv")
     df_ie = pd.read_excel(MODEL, sheet_name="ItemExclusion", usecols=['Option', 'Item Exclusion', 'Multi Overwirte'])
