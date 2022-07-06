@@ -3,17 +3,23 @@ import HitMidKit_Functions as func
 import HitMidKit_DAX as dax
 import pandas as pd
 import numpy as np
+import sys
 
 ############################################################################################
 def refreshItemExcl():
 
     # Opening and transforming data
     MODEL, MODEL_PATH = func.getPath()
-    #PARAMETERS  = func.getParameters(MODEL)
     PARAMETERS = func.getParametersNew(MODEL_PATH + "\Parameters.csv")
 
     df_db = pd.read_csv(MODEL_PATH + f"\Database_{PARAMETERS['Hierarchy']}.csv")
+    if df_db.shape[0] == 0:
+        sys.exit()
+
     df_ie = pd.read_excel(MODEL, sheet_name="ItemExclusion", usecols=['Option', 'Item Exclusion', 'Multi Overwirte'])
+    if df_ie.shape[0] == 0:
+        sys.exit()
+
     df_Sku_plu = func.dataFrameFromTabular(dax.sku_plu(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament'],PARAMETERS['Minimum Sales Units']))
     df_Perf = func.dataFrameFromTabular(dax.perf_dep(PARAMETERS['Week From'],PARAMETERS['Week To'],PARAMETERS['Departament']))
 
@@ -42,7 +48,7 @@ def refreshItemExcl():
                 'Final ROS_U', 'Final ROS_V','Sell-Through', 'Sell-Through In Period', 'Avg Sell-Through In Period',
                 'Markdown Value','MD_ratio','Multi','ItemExcl','NonPromo ROS', 'Promo ROS']
 
-    cols_sku = ['SKU Sub Department','SKU Name','SKU Category','SKU Merch Group', 'SKU Merch Season Type',
+    cols_sku = ['SKU Class','SKU Name','SKU Subclass','SKU Merch Group', 'SKU Merch Season Type',
                 'SKU Merch To Season', 'SKU Merch Type', 'SKU PPL Initial Retail Price','Sales Margin','Option', 'VAT']
 
     df_final = pd.merge(df8[cols_inv],df_Sku_plu[cols_sku],on='Option', how='inner')
@@ -52,16 +58,16 @@ def refreshItemExcl():
     df_perf, ST_Tier_1, ST_Tier_2, MD_Tier1, MD_Tier2 = func.calcPerf(df_Perf,PARAMETERS['Hierarchy'])
 
     score_cols = ['Option','SKU Merch Type','ItemExcl','Sales Value','Final ROS_V', 'ROS Margin Value', 'Avg Sell-Through In Period',
-                  'Markdown Value','SKU Sub Department', 'SKU Category']
+                  'Markdown Value','SKU Class', 'SKU Subclass']
     df_score1 = df_final[score_cols]
 
     if PARAMETERS['Hierarchy'][2] == '2': # division 2: Non Clothing
-        df_score1 = pd.merge(df_score1, df_perf[['SKU Sub Department','Tier1','Tier2','Tier3']], on='SKU Sub Department', how='inner')
+        df_score1 = pd.merge(df_score1, df_perf[['SKU Class','Tier1','Tier2','Tier3']], on='SKU Class', how='inner')
     else:
-        df_score1 = pd.merge(df_score1, df_perf[['SKU Sub Department','SlsTier1','SlsTier2']], on='SKU Sub Department', how='inner')
+        df_score1 = pd.merge(df_score1, df_perf[['SKU Class','SlsTier1','SlsTier2']], on='SKU Class', how='inner')
 
     df_score1['MerchGroup'] = np.where(df_score1['SKU Merch Type']!='Y',"NonY","Y")
-    df_score1['ItemCountDep'] = df_score1[df_score1.ItemExcl==0]['Option'].groupby(df_score1['SKU Sub Department']).transform('count')
+    df_score1['ItemCountDep'] = df_score1[df_score1.ItemExcl==0]['Option'].groupby(df_score1['SKU Class']).transform('count')
     df_score1['ItemCountMer'] = df_score1[df_score1.ItemExcl==0]['Option'].groupby(df_score1['MerchGroup']).transform('count')
 
     # ## Scoring B
@@ -85,7 +91,7 @@ def refreshItemExcl():
         columns={'ROS_V_Tier1': 'ROS_M_Tier1', 'ROS_V_Tier2': 'ROS_M_Tier2', 'ROS_V_Tier3': 'ROS_M_Tier3'},
         inplace=True)
 
-    df_KPI_1 = pd.merge(df_ros_kpi, df_margin_kpi, on='SKU Sub Department', how='inner')
+    df_KPI_1 = pd.merge(df_ros_kpi, df_margin_kpi, on='SKU Class', how='inner')
     df_KPI_2 = pd.merge(df_st_kpi, df_md_kpi, on='MerchGroup', how='inner')
     del df_ros_kpi, df_margin_kpi, df_st_kpi, df_md_kpi
 
@@ -116,15 +122,17 @@ def refreshItemExcl():
         cols = ['Option', 'ROS Score', 'ST Score', 'MD Score', 'MD_SLS', 'TOTAL SCORE', 'HIT / KIT / MID']
 
         # KPI Overwrite: tu dodaj cały df_KPI_2 (ST/MD) + ROS V (bez Ros Margin)
-        df_KPI_1 = df_KPI_1[['SKU Sub Department', 'ROS_V_Tier1', 'ROS_V_Tier2']]
+        df_KPI_1 = df_KPI_1[['SKU Class', 'ROS_V_Tier1', 'ROS_V_Tier2']]
         df_KPI_1[['ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN']] = np.nan
 
+        df_KPI_2.rename(columns={'ST Tier 1 Calc': 'ST Tier 1', 'ST Tier 2 Calc': 'ST Tier 2',
+                                 'MD Tier 1 Calc': 'MD Tier 1', 'MD Tier 2 Calc': 'MD Tier 2'}, inplace=True)
         df_KPI_2[['ST Tier 1 MAN', 'ST Tier 2 MAN', 'MD Tier 1 MAN', 'MD Tier 2 MAN']] = np.nan
 
     df_final = pd.merge(df_final, df_score2[cols], on='Option', how='inner')
 
     # Change the name in the code above in a free time
-    df_final.rename(columns={'SKU Sub Department':'Sub Department','SKU Category':'Category','Final ROS_U':'ROS FINAL',
+    df_final.rename(columns={'SKU Class':'Class','SKU Subclass':'Subclass','Final ROS_U':'ROS FINAL',
                              'Final ROS_V':'ROS Value FINAL','SKU PPL Initial Retail Price':'Initial Price',
                              'SKU Store Grade':'Grade','Sales Margin':'Sales Margin %','Avg Sell-Through In Period':'Sell-Through in Period',
                              'Sales Value in Period Promo':'Promo Sales Value in Period','ROS_ProdGrade':'RAW ROS (excludes MD)',
@@ -133,7 +141,7 @@ def refreshItemExcl():
                              'Stock Units in Period':'Closing Stock Units','ST Score':'Sell-Through Score','MD_SLS':'MD % SLS',
                             'Markdown Value':'MD Retail'},
                inplace = True)
-    hardline_cols = ['Sub Department','Category','Option','SKU Name','Multi','SKU Merch Group', 'SKU Merch Season Type', 'SKU Merch To Season',
+    hardline_cols = ['Class','Subclass','Option','SKU Name','Multi','SKU Merch Group', 'SKU Merch Season Type', 'SKU Merch To Season',
                      'SKU Merch Type','Initial Price','Grade','Sales Margin %','Promo Start','Promo End','Week Start','Week End','Sales Value','Sales Units',
                      'Sales Value in Period','Sales Units in Period','% Total Sales Value','% Total Sales Units',
                      'Promo Sales Value in Period','Promo Sales Units in Period','RAW ROS (excludes MD)','NonPromo ROS',
@@ -141,7 +149,7 @@ def refreshItemExcl():
                      'ROS Value FINAL','ROS Score','Closing Stock Units','Sell-Through in Period','Sell-Through Score',
                      'ROS Margin Value','ROS Margin Score','TOTAL SCORE','HIT / KIT / MID','ItemExcl']
 
-    clothing_cols = ['Sub Department','Category','Option','SKU Name','Multi','SKU Merch Group', 'SKU Merch Season Type', 'SKU Merch To Season',
+    clothing_cols = ['Class','Subclass','Option','SKU Name','Multi','SKU Merch Group', 'SKU Merch Season Type', 'SKU Merch To Season',
                      'SKU Merch Type','Initial Price','Grade','Sales Margin %','Promo Start','Promo End','Week Start','Week End','Sales Value','Sales Units',
                      'Sales Value in Period','Sales Units in Period','% Total Sales Value','% Total Sales Units',
                      'Promo Sales Value in Period','Promo Sales Units in Period','RAW ROS (excludes MD)','NonPromo ROS',
@@ -154,7 +162,6 @@ def refreshItemExcl():
         df_final = df_final[clothing_cols]
 
     df_final.to_excel(MODEL_PATH + f"\Summary_{PARAMETERS['Hierarchy']}.xlsx",index=False)
-
     df_KPI_1.to_csv(MODEL_PATH + f"\KPI_{PARAMETERS['Hierarchy']}.csv", index=False)
     df_KPI_2.to_csv(MODEL_PATH + f"\KPI_{PARAMETERS['Hierarchy']}.csv", mode='a', index=False)
 

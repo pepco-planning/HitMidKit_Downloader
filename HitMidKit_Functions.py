@@ -670,7 +670,7 @@ def InventoryAggregation(df_inv, df_sku, WeekMin, WeekMax, eDur, wDur, sDur):
 
 def calcPerf(df, hier):
     df_perf = df.copy()
-    df_perf.rename(columns={'PRH Sub Department': 'SKU Sub Department'}, inplace=True)
+    df_perf.rename(columns={'PRH Class': 'SKU Class'}, inplace=True)
     df_perf['Sales Perf Min'] = df_perf['Inflows ACT'] / df_perf['Intake AP']
 
     ################################################
@@ -715,7 +715,7 @@ def calcPerf(df, hier):
     return df_perf, ST_Tier_1, ST_Tier_2, MD_Tier1, MD_Tier2
 
 def calcScoringSellThru(df_score, ST_Tier_1, ST_Tier_2):
-    colnames = ['Option', 'SKU Merch Type', 'MerchGroup', 'Avg Sell-Through In Period', 'SKU Sub Department',
+    colnames = ['Option', 'SKU Merch Type', 'MerchGroup', 'Avg Sell-Through In Period', 'SKU Class',
                 'ItemCountMer']
     df1 = pd.DataFrame(columns=colnames)
 
@@ -765,11 +765,11 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
     # Hardline
     if hier[2] == '2':
 
-        colnames = ['Option', score_variable, 'SKU Sub Department', 'Tier1', 'Tier2', 'Tier3', 'ItemCountDep']
+        colnames = ['Option', score_variable, 'SKU Class', 'Tier1', 'Tier2', 'Tier3', 'ItemCountDep']
         df1 = pd.DataFrame(columns=colnames)
 
-        for dep in list(df_score['SKU Sub Department'].unique()):
-            df_temp = df_score[df_score.ItemExcl == 0].loc[df_score['SKU Sub Department'] == dep, colnames].sort_values(
+        for dep in list(df_score['SKU Class'].unique()):
+            df_temp = df_score[df_score.ItemExcl == 0].loc[df_score['SKU Class'] == dep, colnames].sort_values(
                 score_variable, ascending=False).copy()
             df_temp['RankX'] = np.arange(df_temp.shape[0]) + 1
             # df_temp['Cumm%'] = round(df_temp['RankX']/df_temp['RankX'].max(),2)
@@ -784,19 +784,19 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
             df_temp = df_temp[df_temp[score_valueA] != '-']
             df1 = df1.append(df_temp)
 
-        df2 = df1.groupby(['SKU Sub Department', score_valueA])[score_variable].min().reset_index()
+        df2 = df1.groupby(['SKU Class', score_valueA])[score_variable].min().reset_index()
         df2 = df2[df2[score_valueA] != 0]
 
         df2 = pd.pivot_table(df2,
-                             index='SKU Sub Department',
+                             index='SKU Class',
                              columns=score_valueA,
                              values=score_variable,
                              aggfunc='mean').reset_index()
 
-        df = pd.merge(df_score[['Option', 'SKU Sub Department', score_variable]], df2, on='SKU Sub Department',
+        df = pd.merge(df_score[['Option', 'SKU Class', score_variable]], df2, on='SKU Class',
                       how='inner')
 
-        required_cols = ['Option', 'SKU Sub Department', 'ROS Margin Value','Final ROS_V', 'ROS_V_Tier1','ROS_V_Tier2','ROS_V_Tier3']
+        required_cols = ['Option', 'SKU Class', 'ROS Margin Value','Final ROS_V', 'ROS_V_Tier1','ROS_V_Tier2','ROS_V_Tier3']
         df = pd.DataFrame(columns=required_cols, data=df)
         df[score_valueB] = np.where(df[score_variable] >= df['ROS_V_Tier1'], 1.5,
                                     np.where(df[score_variable] >= df['ROS_V_Tier2'], 1,
@@ -806,11 +806,11 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
         ################################################
         # Clothing
     else:
-        colnames = ['Option', score_variable, 'SKU Sub Department', 'SlsTier1', 'SlsTier2', 'ItemCountDep']
+        colnames = ['Option', score_variable, 'SKU Class', 'SlsTier1', 'SlsTier2', 'ItemCountDep']
         df1 = pd.DataFrame(columns=colnames)
 
-        for dep in list(df_score['SKU Sub Department'].unique()):
-            df_temp = df_score[df_score.ItemExcl == 0].loc[df_score['SKU Sub Department'] == dep, colnames].sort_values(
+        for dep in list(df_score['SKU Class'].unique()):
+            df_temp = df_score[df_score.ItemExcl == 0].loc[df_score['SKU Class'] == dep, colnames].sort_values(
                 score_variable, ascending=False).copy()
             df_temp['RankX'] = np.arange(df_temp.shape[0]) + 1
             # df_temp['Cumm%'] = round(df_temp['RankX']/df_temp['RankX'].max(),2)
@@ -822,28 +822,28 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
             df_temp = df_temp[df_temp[score_valueA] != '-']
             df1 = df1.append(df_temp)
 
-        df2 = df1.groupby(['SKU Sub Department', score_valueA])[score_variable].min().reset_index()
+        df2 = df1.groupby(['SKU Class', score_valueA])[score_variable].min().reset_index()
         df2 = df2[df2[score_valueA] != 0]
 
         df2 = pd.pivot_table(df2,
-                             index='SKU Sub Department',
+                             index='SKU Class',
                              columns=score_valueA,
                              values=score_variable,
                              aggfunc='mean').reset_index()
 
-        df = pd.merge(df_score[['Option', 'SKU Sub Department', score_variable]], df2, on='SKU Sub Department',
+        df = pd.merge(df_score[['Option', 'SKU Class', score_variable]], df2, on='SKU Class',
                       how='inner')
 
-        required_cols = ['Option', 'SKU Sub Department', 'ROS Margin Value','Final ROS_V', 'ROS_V_Tier1','ROS_V_Tier2','ROS_V_Tier3']
+        required_cols = ['Option', 'SKU Class', 'ROS Margin Value','Final ROS_V', 'ROS_V_Tier1','ROS_V_Tier2','ROS_V_Tier3']
         df = pd.DataFrame(columns=required_cols, data=df)
         df[score_valueB] = np.where(df[score_variable] >= df['ROS_V_Tier1'], 1,
                                     np.where(df[score_variable] >= df['ROS_V_Tier2'], 0.5, 0))
         df = df[['Option', score_valueB]]
 
-    return df, df2.rename_axis(None, axis=1)  # [['SKU Sub Department','Tier1_V','Tier2_V']]
+    return df, df2.rename_axis(None, axis=1)  # [['SKU Class','Tier1_V','Tier2_V']]
 
 def calcScoringMD(df_score, MD_Tier1, MD_Tier2):
-    colnames = ['Option', 'SKU Merch Type', 'MerchGroup', 'Sales Value', 'Markdown Value', 'SKU Sub Department',
+    colnames = ['Option', 'SKU Merch Type', 'MerchGroup', 'Sales Value', 'Markdown Value', 'SKU Class',
                 'ItemCountMer']
     df1 = pd.DataFrame(columns=colnames)
 
@@ -872,14 +872,11 @@ def calcScoringMD(df_score, MD_Tier1, MD_Tier2):
 
 def refreshKPI(df,hier):
     # get KPI from excel file and transfor the dataframes
-    cols_hdl1 = ['SKU Sub Department', 'ROS_V_Tier1', 'ROS_V_Tier2', 'ROS_V_Tier3', 'ROS_M_Tier1', 'ROS_M_Tier2',
+    cols_hdl1 = ['SKU Class', 'ROS_V_Tier1', 'ROS_V_Tier2', 'ROS_V_Tier3', 'ROS_M_Tier1', 'ROS_M_Tier2',
                  'ROS_M_Tier3', 'ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN', 'ROS_V_Tier3 MAN',
                  'ROS_M_Tier1 MAN', 'ROS_M_Tier2 MAN', 'ROS_M_Tier3 MAN']
-
     cols_hdl2 = ['MerchGroup', 'ST Tier 1', 'ST Tier 2', 'ST Tier 1 MAN', 'ST Tier 2 MAN']
-
-    cols_clt1 = ['SKU Sub Department', 'ROS_V_Tier1', 'ROS_V_Tier2', 'ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN']
-
+    cols_clt1 = ['SKU Class', 'ROS_V_Tier1', 'ROS_V_Tier2', 'ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN']
     cols_clt2 = ['MerchGroup', 'ST Tier 1', 'ST Tier 2', 'MD Tier 1', 'MD Tier 2',
                  'ST Tier 1 MAN', 'ST Tier 2 MAN', 'MD Tier 1 MAN', 'MD Tier 2 MAN']
 
@@ -887,7 +884,8 @@ def refreshKPI(df,hier):
         df_kpi1 = df[:-4][cols_hdl1]
         df_kpi1 = overwriteKPI(df_kpi1).iloc[:, :int(df_kpi1.shape[1] / 2 + 1)]
 
-        df_kpi2 = df[-3:]
+        df_kpi2 = df[-3:].copy()
+        df_kpi2 = df_kpi2.dropna(subset=['SKU Class'])
         df_kpi2.columns = df_kpi2.iloc[0]
         df_kpi2 = df_kpi2[1:]
         df_kpi2 = df_kpi2[cols_hdl2]
@@ -896,13 +894,14 @@ def refreshKPI(df,hier):
         df_kpi1 = df[:-4][cols_clt1]
         df_kpi1 = overwriteKPI(df_kpi1).iloc[:, :int(df_kpi1.shape[1] / 2 + 1)]
 
-        df_kpi2 = df[-3:]
+        df_kpi2 = df[-3:].copy()
+        df_kpi2 = df_kpi2.dropna(subset=['SKU Class'])
         df_kpi2.columns = df_kpi2.iloc[0]
         df_kpi2 = df_kpi2[1:]
         df_kpi2 = df_kpi2[cols_clt2]
         df_kpi2 = overwriteKPI(df_kpi2).iloc[:, :int(df_kpi2.shape[1] / 2 + 1)]
 
-    df_kpi1.rename(columns={'SKU Sub Department': 'Sub Department'}, inplace=True)
+    df_kpi1.rename(columns={'SKU Class': 'Class'}, inplace=True)
 
     return df_kpi1, df_kpi2
 

@@ -2,27 +2,32 @@
 import HitMidKit_Functions as func
 import pandas as pd
 import numpy as np
+import sys
 
 ############################################################################################
 def refreshKPI():
 
     # Opening and transforming data
     MODEL, MODEL_PATH = func.getPath()
-    #PARAMETERS  = func.getParameters(MODEL)
     PARAMETERS = func.getParametersNew(MODEL_PATH + "\Parameters.csv")
 
     df_ItemSummary = pd.read_excel(MODEL, sheet_name="ItemSummary")
     df_ItemSummary = df_ItemSummary.loc[:, ~df_ItemSummary.columns.str.contains('^Unnamed')]
+    if df_ItemSummary.shape[0] == 0:
+        sys.exit()
 
-    df_KpiOverwrite = pd.read_excel(MODEL, sheet_name="KPIsOverwrite", skiprows=1)
-    df_KpiOverwrite = df_KpiOverwrite.loc[:, ~df_KpiOverwrite.columns.str.contains('^Unnamed')]
+    #cols = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    df_KpiOverwrite = pd.read_excel(MODEL, sheet_name="KPIsOverwrite", skiprows=1) #, header = None
+    #df_KpiOverwrite = df_KpiOverwrite.loc[:, ~df_KpiOverwrite.columns.str.contains('^Unnamed')]
+    if df_KpiOverwrite.shape[0] == 0:
+        sys.exit()
 
     a, b = func.refreshKPI(df_KpiOverwrite, int(PARAMETERS['Hierarchy'][2]))
 
     df = df_ItemSummary.copy()
     df['MerchGroup'] = np.where(df['SKU Merch Type']=='Y','Y','NonY')
     df = pd.merge(df,b,on='MerchGroup',how='left')
-    df = pd.merge(df,a,on='Sub Department',how='left')
+    df = pd.merge(df,a,on='Class',how='left')
 
     # NonClothing:
     if PARAMETERS['Hierarchy'][2] == '2':
@@ -51,8 +56,8 @@ def refreshKPI():
         df['ROS Score'] = np.where(df['ROS Value FINAL'] >= df['ROS_V_Tier1'], 1.0,
                                    np.where(df['ROS Value FINAL'] >= df['ROS_V_Tier2'], 0.5, 0))
 
-        df['MD Score'] = np.where(df['MD_SLS'] >= df['MD Tier 1'], 1,
-                                  np.where(df['MD_SLS'] >= df['MD Tier 2'], 0.5, 0))
+        df['MD Score'] = np.where(df['MD % SLS'] >= df['MD Tier 1'], 1,
+                                  np.where(df['MD % SLS'] >= df['MD Tier 2'], 0.5, 0))
 
         df['TOTAL SCORE'] = df['ROS Score'] + df['MD Score'] + df['Sell-Through Score']
 

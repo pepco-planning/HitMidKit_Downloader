@@ -172,28 +172,28 @@ def prh(startWeek,endWeek,dep):
             DEFINE
             var PRH =
                 Filter(
-                    all('Product Hierarchy PRH'[PRH Department],'Product Hierarchy PRH'[PRH Category]),
+                    all('Product Hierarchy PRH'[PRH Department],'Product Hierarchy PRH'[PRH Subclass]),
                     'Product Hierarchy PRH'[PRH Department] in {""" + dep_name + """} 
                     &&
-                    'Product Hierarchy PRH'[PRH Category] <> BLANK())
+                    'Product Hierarchy PRH'[PRH Subclass] <> BLANK())
                     
             EVALUATE
             SUMMARIZECOLUMNS(
-                'Product Hierarchy PRH'[PRH PEPCO],
+                'Product Hierarchy PRH'[PRH Company],
                 'Product Hierarchy PRH'[PRH Division],
                 'Product Hierarchy PRH'[PRH Group],
                 'Product Hierarchy PRH'[PRH Department],
-                'Product Hierarchy PRH'[PRH Sub Department],
-                'Product Hierarchy PRH'[PRH Category],
+                'Product Hierarchy PRH'[PRH Class],
+                'Product Hierarchy PRH'[PRH Subclass],
                 PRH
             )
             ORDER BY
-                'Product Hierarchy PRH'[PRH PEPCO],
+                'Product Hierarchy PRH'[PRH Company],
                 'Product Hierarchy PRH'[PRH Division],
                 'Product Hierarchy PRH'[PRH Group],
                 'Product Hierarchy PRH'[PRH Department],
-                'Product Hierarchy PRH'[PRH Sub Department],
-                'Product Hierarchy PRH'[PRH Category]
+                'Product Hierarchy PRH'[PRH Class],
+                'Product Hierarchy PRH'[PRH Subclass]
             """
 
 def sku_plu(startWeek,endWeek,dep,MinPar):
@@ -234,8 +234,8 @@ def sku_plu(startWeek,endWeek,dep,MinPar):
                 'Products SKU'[SKU Colour],
                 'Products SKU'[SKU Name],
                 'Products SKU'[SKU Store Grade],
-                'Products SKU'[SKU Category],
-                'Products SKU'[SKU Sub Department],
+                'Products SKU'[SKU Subclass],
+                'Products SKU'[SKU Class],
                 'Products SKU'[SKU Price Group],
                 'Products SKU'[SKU Style Type],
                 'Products SKU'[SKU PPL Initial Retail Price],
@@ -475,7 +475,7 @@ def prh_data(startWeek,endWeek,dep):
             SUMMARIZECOLUMNS (
                 'Products SKU'[SKU PLU],
                 'Products SKU'[SKU Colour],
-                'Products SKU'[SKU Category],
+                'Products SKU'[SKU Subclass],
                 pcal, SKU,
                 "Sales V",[Sales Retail Report dsale],
                 "Sales U",[Sales Qty dsale],
@@ -502,7 +502,7 @@ def perf_dep(startWeek,endWeek,dep):
                     )
             EVALUATE
             SUMMARIZECOLUMNS(
-                'Product Hierarchy PRH'[PRH Sub Department],
+                'Product Hierarchy PRH'[PRH Class],
                 pcal,prh,
                 "Sales Retail ACT", [Sales Retail Report dsale],
                 "Markdown ACT",	[Markdown Total Retail Report dprch],
@@ -512,3 +512,25 @@ def perf_dep(startWeek,endWeek,dep):
                 "Intake AP",[Intake Retail Report AP mmfp]
                 )
     """
+
+def supplier(startWeek,endWeek,dep):
+    return """
+            DEFINE
+            var
+            pcal =
+                filter(
+                    values('Planning Calendar PCAL'[PCAL_WEEK_KEY]),
+                    'Planning Calendar PCAL'[PCAL_WEEK_KEY]>= """ + str(startWeek) + """
+                    &&
+                    'Planning Calendar PCAL'[PCAL_WEEK_KEY]<=""" + str(endWeek) + """)
+        
+            EVALUATE
+            SUMMARIZECOLUMNS(
+                'Products SKU'[SKU Name],
+                'Products SKU'[SKU PLU],
+                'Products SKU'[SKU Style Type],
+                'Products SKU'[SKU Supplier Name],
+                pcal
+            )
+    """
+
