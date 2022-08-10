@@ -4,7 +4,7 @@ import os
 import HitMidKit_DAX as daxQ
 import datetime
 import time
-from openpyxl import load_workbook
+# from openpyxl import load_workbook
 # import xlwings as xw
 import sys
 from sys import path
@@ -90,13 +90,6 @@ def getParametersNew(MODEL_PATH): #MODEL_PATH
 def showStatusModel(path,y_n,dep,hier,status, value,value_total):
     """
     0 status means: NOT busy. Inventory file is ready;
-    showStatus(path, 0, dep=None, hier=None, week=None)
-    :param path:
-    :param y_n:
-    :param dep:
-    :param hier:
-    :param week:
-    :return:
     """
     PROGRESS = "{0:.0f}%".format(value/value_total * 100)
 
@@ -105,12 +98,6 @@ def showStatusModel(path,y_n,dep,hier,status, value,value_total):
             os.remove(path + r"\Ready.txt")
 
         file = open(path + r"\Not Ready.txt", "w")
-        # file.write(f"Data are still downloading...\n\n"
-        #            f"Department: {dep}\n"
-        #            f"Hierarchy: {hier}\n"
-        #            f"Status: {status}\n"
-        #            f"Progress: {PROGRESS}\n"
-        #            f"{value/value_total}")
         file.write(f"{status}\n"
                    f"{value/value_total}")
         file.close()
@@ -955,64 +942,64 @@ def loadParameters():
 
     return dep, startWeek, endWeek, minPar, path, hierIdx, reportType
 
-# All Reports (excl. Inventory):
-def runDaxQueriesExe(startWeek,endWeek,dep,dax_query_list,path, hierIdx):
-    if type(dep) == list:
-        for index, query in enumerate(dax_query_list):
-            df_temp = pd.DataFrame()
-            for dep_index, dep_name in enumerate(dep):
-                startQuery = datetime.datetime.now()
-                startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
-                showStatus(path, 1, dep_name, hierIdx[dep_index], week=None)
-                try:
-                    df = runDaxQuery(startWeek, endWeek, dep_name, query, path)
-                except:
-                    try:
-                        time.sleep(60)
-                        df = runDaxQuery(startWeek, endWeek, dep_name, query, path)
-                    except Exception as ex:
-                        file = open(path + "ConnectionIssue.txt", "w")
-                        file.write(f"Connection error:\n{ex}\n")
-                        file.close()
-                        return None
-
-                df['HierarchyIndex'] = hierIdx[dep_index]
-                df_temp = df_temp.append(df)
-                endQuery = datetime.datetime.now()
-                endQuery = endQuery.strftime("%H:%M:%S")
-                saveLog(startQuery, endQuery, dep_name, hierIdx[dep_index], week=None, path=path, query=query.__name__)
-
-            q_name = query.__name__ + '.csv'
-            df_temp.to_csv(path + q_name.capitalize(), index=False)
-    else:
-        for index, query in enumerate(dax_query_list):
-            startQuery = datetime.datetime.now()
-            startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
-            showStatus(path, 1, dep, hierIdx, week=None)
-
-            df_temp = pd.DataFrame()
-            try:
-                df = runDaxQuery(startWeek, endWeek, dep, query, path)
-            except:
-                try:
-                    time.sleep(60)
-                    df = runDaxQuery(startWeek, endWeek, dep, query, path)
-                except Exception as ex:
-                    file = open(path + "ConnectionIssue.txt", "w")
-                    file.write(f"Connection error:\n{ex}\n")
-                    file.close()
-                    return None
-
-            df['HierarchyIndex'] = hierIdx
-            df_temp = df_temp.append(df)
-            endQuery = datetime.datetime.now()
-            endQuery = endQuery.strftime("%H:%M:%S")
-            saveLog(startQuery, endQuery, dep, hierIdx, week=None, path=path, query=query.__name__)
-
-        q_name = query.__name__ + '.csv'
-        df_temp.to_csv(path + q_name.capitalize(), index=False)
-
-    showStatus(path, 0, dep, hier=None, week=None) # 0 means Ready
+# # All Reports (excl. Inventory):
+# def runDaxQueriesExe(startWeek,endWeek,dep,dax_query_list,path, hierIdx):
+#     if type(dep) == list:
+#         for index, query in enumerate(dax_query_list):
+#             df_temp = pd.DataFrame()
+#             for dep_index, dep_name in enumerate(dep):
+#                 startQuery = datetime.datetime.now()
+#                 startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
+#                 showStatus(path, 1, dep_name, hierIdx[dep_index], week=None)
+#                 try:
+#                     df = runDaxQuery(startWeek, endWeek, dep_name, query, path)
+#                 except:
+#                     try:
+#                         time.sleep(60)
+#                         df = runDaxQuery(startWeek, endWeek, dep_name, query, path)
+#                     except Exception as ex:
+#                         file = open(path + "ConnectionIssue.txt", "w")
+#                         file.write(f"Connection error:\n{ex}\n")
+#                         file.close()
+#                         return None
+#
+#                 df['HierarchyIndex'] = hierIdx[dep_index]
+#                 df_temp = df_temp.append(df)
+#                 endQuery = datetime.datetime.now()
+#                 endQuery = endQuery.strftime("%H:%M:%S")
+#                 saveLog(startQuery, endQuery, dep_name, hierIdx[dep_index], week=None, path=path, query=query.__name__)
+#
+#             q_name = query.__name__ + '.csv'
+#             df_temp.to_csv(path + q_name.capitalize(), index=False)
+#     else:
+#         for index, query in enumerate(dax_query_list):
+#             startQuery = datetime.datetime.now()
+#             startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
+#             showStatus(path, 1, dep, hierIdx, week=None)
+#
+#             df_temp = pd.DataFrame()
+#             try:
+#                 df = runDaxQuery(startWeek, endWeek, dep, query, path)
+#             except:
+#                 try:
+#                     time.sleep(60)
+#                     df = runDaxQuery(startWeek, endWeek, dep, query, path)
+#                 except Exception as ex:
+#                     file = open(path + "ConnectionIssue.txt", "w")
+#                     file.write(f"Connection error:\n{ex}\n")
+#                     file.close()
+#                     return None
+#
+#             df['HierarchyIndex'] = hierIdx
+#             df_temp = df_temp.append(df)
+#             endQuery = datetime.datetime.now()
+#             endQuery = endQuery.strftime("%H:%M:%S")
+#             saveLog(startQuery, endQuery, dep, hierIdx, week=None, path=path, query=query.__name__)
+#
+#         q_name = query.__name__ + '.csv'
+#         df_temp.to_csv(path + q_name.capitalize(), index=False)
+#
+#     showStatus(path, 0, dep, hier=None, week=None) # 0 means Ready
 
 # Only Inventory:
 def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
@@ -1023,13 +1010,13 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
             for week in wList.iloc[:, 5]:
                 weeksList.append(week)
             del wList
+            estimatedTime = len(weeksList) * 5  # default time seeing on the begining is 5 minutes
 
             col = ['SKU PLU', 'SKU Colour', 'STR Number', 'Pl Year', 'Pl Week', 'SalesU', 'SalesV', 'SalesM', 'CSOHU', 'CSOHV']
             inventory_df = pd.DataFrame()
-            for week in weeksList:
-                startQuery = datetime.datetime.now()
-                startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
-                showStatus(path, 1, dep_name, hierIdx[dep_index], week)
+            for x, week in enumerate(weeksList):
+                startQuery = datetime.datetime.now().strftime("%H:%M:%S")
+                showStatus(path, 1, dep_name, hierIdx[dep_index], week, estimatedTime)
                 try:
                     df = dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep_name))
                 except:
@@ -1041,31 +1028,36 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
                         file.write(f"Connection error:\n{ex}\n")
                         file.close()
                         return None
-
                 df['total'] = np.where(df.iloc[:, 5:].sum(axis=1) > 0, 1, 0)
                 df = df[df.total > 0]
                 df.drop(columns={'total'}, inplace=True)
-
                 inventory_df = inventory_df.append(df)
-                endQuery = datetime.datetime.now()
-                endQuery = endQuery.strftime("%H:%M:%S")
-                saveLog(startQuery, endQuery, dep_name, hierIdx[dep_index], week, path, query='Inventory')
+
+                ### Estimated Time
+                endQuery = datetime.datetime.now().strftime("%H:%M:%S")
+                queryTime = str(datetime.datetime.strptime(endQuery, "%H:%M:%S") - datetime.datetime.strptime(startQuery,"%H:%M:%S"))
+                ftr = [3600, 60, 1]
+                queryTimeValue = sum([a * b for a, b in zip(ftr, map(int, queryTime.split(':')))]) / 60
+                estimatedTime = round(len(weeksList) * queryTimeValue - (x + 1) * queryTimeValue, 1)
+                #saveLog(startQuery, endQuery, dep_name, hierIdx[dep_index], week, path, query='Inventory')
 
             inventory_df.columns = col
-            inventory_df.to_csv(path + f"{hierIdx[dep_index]}_HitMidKit.csv", index=False)
+            fileName = f"{hierIdx}_HitMidKit"
+            compression_opts = dict(method='zip', archive_name=fileName + '.csv')
+            inventory_df.to_csv(path + fileName + '.zip', index=False, compression=compression_opts)
     else:
         weeksList = []
         wList = dataFrameFromTabular(daxQ.pcal(startWeek, endWeek, dep))
         for week in wList.iloc[:, 5]:
             weeksList.append(week)
         del wList
+        estimatedTime = len(weeksList) * 5  # default time seeing on the begining is 5 minutes
 
         col = ['SKU PLU','SKU Colour','STR Number','Pl Year','Pl Week','SalesU','SalesV','SalesM','CSOHU','CSOHV']
         inventory_df = pd.DataFrame()
-        for week in weeksList:
-            startQuery = datetime.datetime.now()
-            startQuery = startQuery.strftime("%H:%M:%S")  # startQuery.strftime("%d/%m/%Y %H:%M:%S")
-            showStatus(path, 1, dep, hierIdx, week)
+        for x, week in enumerate(weeksList):
+            startQuery = datetime.datetime.now().strftime("%H:%M:%S")
+            showStatus(path, 1, dep, hierIdx, week, estimatedTime)
             try:
                 df = dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep))
             except:
@@ -1082,24 +1074,27 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
             df.drop(columns={'total'}, inplace=True)
             inventory_df = inventory_df.append(df)
 
-            endQuery = datetime.datetime.now()
-            endQuery = endQuery.strftime("%H:%M:%S")
-            saveLog(startQuery, endQuery, dep, hierIdx, week, path, query='Inventory')
+            ### Estimated Time
+            endQuery = datetime.datetime.now().strftime("%H:%M:%S")
+            queryTime = str(datetime.datetime.strptime(endQuery, "%H:%M:%S") - datetime.datetime.strptime(startQuery, "%H:%M:%S"))
+            ftr = [3600, 60, 1]
+            queryTimeValue = sum([a * b for a, b in zip(ftr, map(int, queryTime.split(':')))]) / 60
+            estimatedTime = round(len(weeksList) * queryTimeValue - (x + 1) * queryTimeValue,1)
+            #saveLog(startQuery, endQuery, dep, hierIdx, week, path, query='Inventory')
 
         inventory_df.columns = col
         fileName = f"{hierIdx}_HitMidKit"
-        compression_opts = dict(method='zip',
-                                archive_name=fileName + '.csv')
+        compression_opts = dict(method='zip',archive_name=fileName + '.csv')
         inventory_df.to_csv(path + fileName + '.zip', index=False, compression=compression_opts)
 
         #inventory_df.to_csv(path + f"{hierIdx}_HitMidKit.csv", index=False)
 
-    showStatus(path, 0, dep=None, hier=None, week=None)  # 0 status means: NOT busy. Inventory file is ready
+    showStatus(path, 0, dep=None, hier=None, week=None, etime=None)  # 0 status means: NOT busy. Inventory file is ready
 
 ###################################
 # Additional func for Inventory Downloader
 ###################################
-def showStatus(path,y_n,dep,hier,week):
+def showStatus(path,y_n,dep,hier,week, etime):
     if y_n == 1:
         if os.path.exists(path + "Ready.txt"):
             os.remove(path + "Ready.txt")
@@ -1108,7 +1103,8 @@ def showStatus(path,y_n,dep,hier,week):
         file.write(f"Data are still downloading\n\n"
                    f"Department: {dep}\n"
                    f"Hierarchy: {hier}\n"
-                   f"Week: {week}")
+                   f"Week: {week}\n"
+                   f"Estimated time: {etime} minutes")
         file.close()
     else:
         if os.path.exists(path + "Not Ready.txt"):
