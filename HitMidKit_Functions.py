@@ -56,21 +56,21 @@ def getPath():
         model_name = model_name[:-1]
     return model_name, SETTINGS_PATH
 
-def getParameters(MODEL_PATH): #MODEL_PATH
-
-    df = pd.read_excel(MODEL_PATH, sheet_name='py_inputs', skiprows=1)
-    df = df[['Variables Header', 'Chosen Variables']]
-    param_names = ['Hierarchy','Departament','Grading Type','Week From','Week To','Minimum Sales Units','MinTotSls','MinStrStk','StrCount','WeekExcl',
-                 'E Merch Group Duration','W Merch Group Duration','S Merch Group Duration','Path','Path Inventory','Grade2','Grade3']
-
-    param_values = list()
-    for idx in range(len(param_names)):
-        param_value = df[df['Variables Header'] == param_names[idx]]['Chosen Variables'].item()
-        param_values.append(param_value)
-
-    variables = dict(zip(param_names, param_values))
-
-    return variables
+# def getParameters(MODEL_PATH): #MODEL_PATH
+#
+#     df = pd.read_excel(MODEL_PATH, sheet_name='py_inputs', skiprows=1)
+#     df = df[['Variables Header', 'Chosen Variables']]
+#     param_names = ['Hierarchy','Departament','Grading Type','Week From','Week To','Minimum Sales Units','MinTotSls','MinStrStk','StrCount','WeekExcl',
+#                  'E Merch Group Duration','W Merch Group Duration','S Merch Group Duration','Path','Path Inventory','Grade2','Grade3']
+#
+#     param_values = list()
+#     for idx in range(len(param_names)):
+#         param_value = df[df['Variables Header'] == param_names[idx]]['Chosen Variables'].item()
+#         param_values.append(param_value)
+#
+#     variables = dict(zip(param_names, param_values))
+#
+#     return variables
 
 def getParametersNew(MODEL_PATH): #MODEL_PATH
 
@@ -1087,7 +1087,12 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
             saveLog(startQuery, endQuery, dep, hierIdx, week, path, query='Inventory')
 
         inventory_df.columns = col
-        inventory_df.to_csv(path + f"{hierIdx}_HitMidKit.csv", index=False)
+        fileName = f"{hierIdx}_HitMidKit"
+        compression_opts = dict(method='zip',
+                                archive_name=fileName + '.csv')
+        inventory_df.to_csv(path + fileName + '.zip', index=False, compression=compression_opts)
+
+        #inventory_df.to_csv(path + f"{hierIdx}_HitMidKit.csv", index=False)
 
     showStatus(path, 0, dep=None, hier=None, week=None)  # 0 status means: NOT busy. Inventory file is ready
 
