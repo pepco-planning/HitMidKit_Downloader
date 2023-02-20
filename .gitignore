@@ -51,10 +51,7 @@ venv.bak/
 
 #####
 # Added Manualy
-/input data
 /workbook
-/model
 *.exe
 *.xlsx
 *.xlsm
-temporary.py

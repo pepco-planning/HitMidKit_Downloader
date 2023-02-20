@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 import HitMidKit_DAX as daxQ
-import datetime
+from datetime import datetime
 import time
 # from openpyxl import load_workbook
 # import xlwings as xw
@@ -942,6 +942,10 @@ def loadParameters():
 
     return dep, startWeek, endWeek, minPar, path, hierIdx, reportType
 
+def Convert(string):
+    li = list(string.split(","))
+    return li
+
 # # All Reports (excl. Inventory):
 # def runDaxQueriesExe(startWeek,endWeek,dep,dax_query_list,path, hierIdx):
 #     if type(dep) == list:
@@ -1002,7 +1006,14 @@ def loadParameters():
 #     showStatus(path, 0, dep, hier=None, week=None) # 0 means Ready
 
 # Only Inventory:
-def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
+def loadInventory(startWeek,endWeek, minPar, depValue, path, hierValue):
+    if len(depValue) > 100:
+        dep = Convert(depValue)
+        hierIdx = Convert(hierValue)
+    else:
+        dep = depValue
+        hierIdx = hierValue
+
     if type(dep) == list:
         for dep_index, dep_name in enumerate(dep):
             weeksList = []
@@ -1015,7 +1026,8 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
             col = ['SKU PLU', 'SKU Colour', 'STR Number', 'Pl Year', 'Pl Week', 'SalesU', 'SalesV', 'SalesM', 'CSOHU', 'CSOHV']
             inventory_df = pd.DataFrame()
             for x, week in enumerate(weeksList):
-                startQuery = datetime.datetime.now().strftime("%H:%M:%S")
+                #startQuery = datetime.datetime.now().strftime("%H:%M:%S")
+                startQuery = datetime.now()
                 showStatus(path, 1, dep_name, hierIdx[dep_index], week, estimatedTime)
                 try:
                     df = dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep_name))
@@ -1033,16 +1045,24 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
                 df.drop(columns={'total'}, inplace=True)
                 inventory_df = inventory_df.append(df)
 
-                ### Estimated Time
-                endQuery = datetime.datetime.now().strftime("%H:%M:%S")
-                queryTime = str(datetime.datetime.strptime(endQuery, "%H:%M:%S") - datetime.datetime.strptime(startQuery,"%H:%M:%S"))
-                ftr = [3600, 60, 1]
-                queryTimeValue = sum([a * b for a, b in zip(ftr, map(int, queryTime.split(':')))]) / 60
-                estimatedTime = round(len(weeksList) * queryTimeValue - (x + 1) * queryTimeValue, 1)
+                ### Estimated Time (old)
+                #endQuery = datetime.datetime.now().strftime("%H:%M:%S")
+                #queryTime = str(datetime.datetime.strptime(endQuery, "%H:%M:%S") - datetime.datetime.strptime(startQuery,"%H:%M:%S"))
+                # ftr = [3600, 60, 1]
+                # queryTimeValue = sum([a * b for a, b in zip(ftr, map(int, queryTime.split(':')))]) / 60
+                # estimatedTime = round(len(weeksList) * queryTimeValue - (x + 1) * queryTimeValue, 1)
+                #saveLog(startQuery, endQuery, dep_name, hierIdx[dep_index], week, path, query='Inventory')
+
+                ### Estimated Time (new)
+                endQuery = datetime.now()
+                queryTime = endQuery - startQuery
+                duration_in_s = queryTime.total_seconds()
+                duration_in_m = divmod(duration_in_s, 60)[0]
+                estimatedTime = round(len(weeksList) * duration_in_m - (x + 1) * duration_in_m, 1)
                 #saveLog(startQuery, endQuery, dep_name, hierIdx[dep_index], week, path, query='Inventory')
 
             inventory_df.columns = col
-            fileName = f"{hierIdx}_HitMidKit"
+            fileName = f"{hierIdx[dep_index]}_HitMidKit"
             compression_opts = dict(method='zip', archive_name=fileName + '.csv')
             inventory_df.to_csv(path + fileName + '.zip', index=False, compression=compression_opts)
     else:
@@ -1056,7 +1076,7 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
         col = ['SKU PLU','SKU Colour','STR Number','Pl Year','Pl Week','SalesU','SalesV','SalesM','CSOHU','CSOHV']
         inventory_df = pd.DataFrame()
         for x, week in enumerate(weeksList):
-            startQuery = datetime.datetime.now().strftime("%H:%M:%S")
+            startQuery = datetime.now()
             showStatus(path, 1, dep, hierIdx, week, estimatedTime)
             try:
                 df = dataFrameFromTabular(daxQ.inventory(startWeek, endWeek, week, minPar, dep))
@@ -1075,12 +1095,11 @@ def loadInventory(startWeek,endWeek, minPar, dep, path, hierIdx):
             inventory_df = inventory_df.append(df)
 
             ### Estimated Time
-            endQuery = datetime.datetime.now().strftime("%H:%M:%S")
-            queryTime = str(datetime.datetime.strptime(endQuery, "%H:%M:%S") - datetime.datetime.strptime(startQuery, "%H:%M:%S"))
-            ftr = [3600, 60, 1]
-            queryTimeValue = sum([a * b for a, b in zip(ftr, map(int, queryTime.split(':')))]) / 60
-            estimatedTime = round(len(weeksList) * queryTimeValue - (x + 1) * queryTimeValue,1)
-            #saveLog(startQuery, endQuery, dep, hierIdx, week, path, query='Inventory')
+            endQuery = datetime.now()
+            queryTime = endQuery - startQuery
+            duration_in_s = queryTime.total_seconds()
+            duration_in_m = divmod(duration_in_s, 60)[0]
+            estimatedTime = round(len(weeksList) * duration_in_m - (x + 1) * duration_in_m, 1)
 
         inventory_df.columns = col
         fileName = f"{hierIdx}_HitMidKit"
@@ -1116,12 +1135,13 @@ def showStatus(path,y_n,dep,hier,week, etime):
         file.close()
 
 def saveLog(startQuery, endQuery, dep, hierIdx, week, path, query):
-    today = datetime.datetime.today()
-    today = today.strftime("%d/%m/%Y")
-    queryTime = str(datetime.datetime.strptime(endQuery, "%H:%M:%S") - datetime.datetime.strptime(startQuery, "%H:%M:%S"))
-    logList = [today, query, dep, str(hierIdx), str(week), startQuery, endQuery, queryTime]
+    # today = datetime.datetime.today()
+    # queryTime = str(datetime.datetime.strptime(endQuery, "%H:%M:%S") - datetime.datetime.strptime(startQuery, "%H:%M:%S"))
+    today = datetime.today().strftime("%d/%m/%Y")
+    queryTime = endQuery - startQuery
+    logList = [today, query, dep, str(hierIdx), str(week), startQuery.strftime("%H:%M:%S"), endQuery.strftime("%H:%M:%S"), divmod(queryTime.total_seconds(), 60)[0]]
 
-    with open(path + '../Logs/Log_detailed_HitMidKit.log', 'a+') as log_file:
+    with open(path + '/HMK Program Files/Log_detailed_HitMidKit.log', 'a+') as log_file:
         log_file.write("\n")
         log_file.writelines(';'.join(logList))
 
