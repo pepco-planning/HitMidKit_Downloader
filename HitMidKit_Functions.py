@@ -663,16 +663,15 @@ def calcPerf(df, hier):
     ################################################
     # Hardline
     if hier[2] == '2':
-        df_perf['Sales Perf'] = df_perf['Sales Retail ACT'] / (
-                    df_perf['Sales Retail AP'] * df_perf['Sales Perf Min']) - 1
+        df_perf['Sales Perf'] = df_perf['Sales Retail ACT'] / (df_perf['Sales Retail AP'] * df_perf['Sales Perf Min']) - 1
 
-        df_perf['Tier1'] = np.where(df_perf['Sales Perf'] > 0.05, 0.3,
+        df_perf['Tier1_GM'] = np.where(df_perf['Sales Perf'] > 0.05, 0.3,                       # 30% / 25% / 20%
                                     np.where(df_perf['Sales Perf'] > -0.05, 0.25, 0.2))
 
-        df_perf['Tier2'] = np.where(df_perf['Sales Perf'] > 0.05, 0.6,
+        df_perf['Tier2_GM'] = np.where(df_perf['Sales Perf'] > 0.05, 0.6,                       # 30% / 25% / 20%
                                     np.where(df_perf['Sales Perf'] > -0.05, 0.5, 0.4))
 
-        df_perf['Tier3'] = np.where(df_perf['Sales Perf'] > 0.05, 0.8,
+        df_perf['Tier3_GM'] = np.where(df_perf['Sales Perf'] > 0.05, 0.8,                       # 20% / 25% / 30%
                                     np.where(df_perf['Sales Perf'] > -0.05, 0.75, 0.7))
 
         Sales_Perf_Min = df_perf['Inflows ACT'].sum() / np.where(df_perf['Intake AP'].sum() == 0, 1, df_perf['Intake AP'].sum())
@@ -680,28 +679,28 @@ def calcPerf(df, hier):
     ################################################
     # Clothing
     else:
-        df_perf['Sales Perf'] = df_perf['Sales Retail ACT'] / df_perf['Sales Retail AP'] - 1
-        df_perf['SlsTier1'] = np.where(df_perf['Sales Perf'] > 0.05, 0.4,
-                                       np.where(df_perf['Sales Perf'] > -0.05, 0.3, 0.2))
+        df_perf['Sales Perf'] = df_perf['Sales Retail ACT'] / df_perf['Sales Retail AP'] - 1 # To check: (df_perf['Sales Retail AP'] * df_perf['Sales Perf Min']) - 1
 
-        df_perf['SlsTier2'] = np.where(df_perf['Sales Perf'] > 0.05, 0.8,
-                                       np.where(df_perf['Sales Perf'] > -0.05, 0.65, 0.5))
+        df_perf['Tier1_CL'] = np.where(df_perf['Sales Perf'] > 0.05, 0.4,                       # 40% / 30% / 20%
+                                    np.where(df_perf['Sales Perf'] > -0.05, 0.3, 0.2))
 
-        Sales_dep_Perf = df_perf['Sales Retail ACT'].sum() / df_perf['Sales Retail AP'].sum() - 1
+        df_perf['Tier2_CL'] = np.where(df_perf['Sales Perf'] > 0.05, 0.8,                       # 40% / 35% / 30%
+                                    np.where(df_perf['Sales Perf'] > -0.05, 0.65, 0.5))
+
+        # if df_perf['Sales Retail AP'].sum() > 0:
+        #     Sales_dep_Perf = df_perf['Sales Retail ACT'].sum() / df_perf['Sales Retail AP'].sum() - 1
+        # else:
+        #     Sales_dep_Perf = 0
+        Sales_dep_Perf = df_perf['Sales Retail ACT'].sum() / np.where(df_perf['Sales Retail AP'].sum() == 0, 1,df_perf['Sales Retail AP'].sum()) - 1
 
     ################################################
-    # Total ratios (Sell Through & Markdowns)
-    MKD_Perf = -df_perf['Markdown ACT'].sum() / df_perf['Markdown AP'].sum() + 1
+    # Total ratios (Sell Through)
+    ST_Tier_1 = np.where(Sales_dep_Perf > 0.05, 0.4, np.where(Sales_dep_Perf >= -0.05, 0.3, 0.2))   # 40% / 30% / 20%
+    ST_Tier_2 = np.where(Sales_dep_Perf > 0.05, 0.8, np.where(Sales_dep_Perf >= -0.05, 0.65, 0.5))  # 40% / 35% / 30%
 
-    MD_Tier1 = np.where(MKD_Perf > 0.05, 0.8, np.where(MKD_Perf >= -0.05, 0.6, 0.4))
-    MD_Tier2 = np.where(MKD_Perf > 0.05, 1.5, np.where(MKD_Perf >= -0.05, 1.2, 0.9))
+    return df_perf, ST_Tier_1, ST_Tier_2
 
-    ST_Tier_1 = np.where(Sales_dep_Perf > 0.05, 0.4, np.where(Sales_dep_Perf >= -0.05, 0.3, 0.2))
-    ST_Tier_2 = np.where(Sales_dep_Perf > 0.05, 0.8, np.where(Sales_dep_Perf >= -0.05, 0.65, 0.5))
-
-    return df_perf, ST_Tier_1, ST_Tier_2, MD_Tier1, MD_Tier2
-
-def calcScoringSellThru(df_score, ST_Tier_1, ST_Tier_2):
+def calcScoringSellThru(df_score, ST_Tier_1, ST_Tier_2,hier):
     colnames = ['Option', 'SKU Merch Type', 'MerchGroup', 'Avg Sell-Through In Period', 'SKU Class',
                 'ItemCountMer']
     df1 = pd.DataFrame(columns=colnames)
@@ -731,8 +730,14 @@ def calcScoringSellThru(df_score, ST_Tier_1, ST_Tier_2):
 
     required_cols = ['Option', 'MerchGroup', 'Avg Sell-Through In Period', 'ST Tier 1 Calc', 'ST Tier 2 Calc']
     df = pd.DataFrame(columns=required_cols, data=df)
-    df['ST Score'] = np.where(df['Avg Sell-Through In Period'] >= df['ST Tier 1 Calc'], 1,
-                              np.where(df['Avg Sell-Through In Period'] >= df['ST Tier 2 Calc'], 0.5, 0))
+
+    if hier[2] == '2':
+        df['ST Score'] = np.where(df['Avg Sell-Through In Period'] >= df['ST Tier 1 Calc'], 1,
+                                  np.where(df['Avg Sell-Through In Period'] >= df['ST Tier 2 Calc'], 0.5, 0))
+    else:
+        df['ST Score'] = np.where(df['Avg Sell-Through In Period'] >= df['ST Tier 1 Calc'], 4,
+                                  np.where(df['Avg Sell-Through In Period'] >= df['ST Tier 2 Calc'], 2, 0))
+
     df = df[['Option', 'ST Score']]
 
     df2 = df2.rename_axis(None, axis=1)
@@ -752,7 +757,7 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
     # Hardline
     if hier[2] == '2':
 
-        colnames = ['Option', score_variable, 'SKU Class', 'Tier1', 'Tier2', 'Tier3', 'ItemCountDep']
+        colnames = ['Option', score_variable, 'SKU Class', 'Tier1_GM', 'Tier2_GM', 'Tier3_GM', 'ItemCountDep']
         df1 = pd.DataFrame(columns=colnames)
 
         for dep in list(df_score['SKU Class'].unique()):
@@ -760,12 +765,12 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
                 score_variable, ascending=False).copy()
             df_temp['RankX'] = np.arange(df_temp.shape[0]) + 1
             # df_temp['Cumm%'] = round(df_temp['RankX']/df_temp['RankX'].max(),2)
-            df_temp[score_valueA] = np.where(df_temp['RankX'] <= np.ceil(df_temp['Tier1'] * df_temp['ItemCountDep']),
+            df_temp[score_valueA] = np.where(df_temp['RankX'] <= np.ceil(df_temp['Tier1_GM'] * df_temp['ItemCountDep']),
                                              'ROS_V_Tier1',
                                              np.where(df_temp['RankX'] <= np.ceil(
-                                                 df_temp['Tier2'] * df_temp['ItemCountDep']), 'ROS_V_Tier2',
+                                                 df_temp['Tier2_GM'] * df_temp['ItemCountDep']), 'ROS_V_Tier2',
                                                       np.where(df_temp['RankX'] <= np.ceil(
-                                                          df_temp['Tier3'] * df_temp['ItemCountDep']), 'ROS_V_Tier3',
+                                                          df_temp['Tier3_GM'] * df_temp['ItemCountDep']), 'ROS_V_Tier3',
                                                                '-')))
 
             df_temp = df_temp[df_temp[score_valueA] != '-']
@@ -793,7 +798,7 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
         ################################################
         # Clothing
     else:
-        colnames = ['Option', score_variable, 'SKU Class', 'SlsTier1', 'SlsTier2', 'ItemCountDep']
+        colnames = ['Option', score_variable, 'SKU Class', 'Tier1_CL', 'Tier2_CL', 'ItemCountDep']
         df1 = pd.DataFrame(columns=colnames)
 
         for dep in list(df_score['SKU Class'].unique()):
@@ -801,10 +806,10 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
                 score_variable, ascending=False).copy()
             df_temp['RankX'] = np.arange(df_temp.shape[0]) + 1
             # df_temp['Cumm%'] = round(df_temp['RankX']/df_temp['RankX'].max(),2)
-            df_temp[score_valueA] = np.where(df_temp['RankX'] <= np.ceil(df_temp['SlsTier1'] * df_temp['ItemCountDep']),
+            df_temp[score_valueA] = np.where(df_temp['RankX'] <= np.ceil(df_temp['Tier1_CL'] * df_temp['ItemCountDep']),
                                              'ROS_V_Tier1',
                                              np.where(df_temp['RankX'] <= np.ceil(
-                                                 df_temp['SlsTier2'] * df_temp['ItemCountDep']), 'ROS_V_Tier2', '-'))
+                                                 df_temp['Tier2_CL'] * df_temp['ItemCountDep']), 'ROS_V_Tier2', '-'))
 
             df_temp = df_temp[df_temp[score_valueA] != '-']
             df1 = df1.append(df_temp)
@@ -823,49 +828,44 @@ def calcScoringROS(score_variable, score_valueA, score_valueB, df_score, hier):
 
         required_cols = ['Option', 'SKU Class', 'ROS Margin Value','Final ROS_V', 'ROS_V_Tier1','ROS_V_Tier2','ROS_V_Tier3']
         df = pd.DataFrame(columns=required_cols, data=df)
-        df[score_valueB] = np.where(df[score_variable] >= df['ROS_V_Tier1'], 1,
-                                    np.where(df[score_variable] >= df['ROS_V_Tier2'], 0.5, 0))
+        df[score_valueB] = np.where(df[score_variable] >= df['ROS_V_Tier1'], 4,
+                                    np.where(df[score_variable] >= df['ROS_V_Tier2'], 2, 0))
         df = df[['Option', score_valueB]]
 
     return df, df2.rename_axis(None, axis=1)  # [['SKU Class','Tier1_V','Tier2_V']]
 
-def calcScoringMD(df_score, MD_Tier1, MD_Tier2):
-    colnames = ['Option', 'SKU Merch Type', 'MerchGroup', 'Sales Value', 'Markdown Value', 'SKU Class',
-                'ItemCountMer']
-    df1 = pd.DataFrame(columns=colnames)
-
-    for merch in list(df_score['MerchGroup'].unique()):
-        df_temp = df_score[df_score.ItemExcl == 0].loc[df_score['MerchGroup'] == merch, colnames] \
-            .sort_values(by='MerchGroup', ascending=False).copy()
-        df_temp['MD_SLS'] = np.where(df_temp['Markdown Value'] > 0, np.where(df_temp['Sales Value'] > 0,
-                                                                             df_temp['Markdown Value'] / df_temp[
-                                                                                 'Sales Value'], 1), 0)
-        # new
-        try:
-            df_temp['MD Tier 1 Calc'] = df_temp['Markdown Value'].sum() / df_temp['Sales Value'].sum() * MD_Tier1
-            df_temp['MD Tier 2 Calc'] = df_temp['Markdown Value'].sum() / df_temp['Sales Value'].sum() * MD_Tier2
-        except ZeroDivisionError:
-            pass
-
-        df1 = df1.append(df_temp)
-
-    df1['MD Score'] = np.where(df1['MD_SLS'] <= df1['MD Tier 1 Calc'], 1,
-                               np.where(df1['MD_SLS'] <= df1['MD Tier 2 Calc'], 0.5, 0))
-
-    df = df1[['Option', 'MD Score', 'MD_SLS']].copy()
-    df2 = df1.groupby(['MerchGroup']).agg({'MD Tier 1 Calc': 'min', 'MD Tier 2 Calc': 'min'}).reset_index()
-
-    return df, df2
-
+# def refreshKPI(df,hier):
+#     # get KPI from excel file and transfor the dataframes
+#     cols_1 = ['SKU Class', 'ROS_V_Tier1', 'ROS_V_Tier2', 'ROS_V_Tier3', 'ROS_M_Tier1', 'ROS_M_Tier2',
+#               'ROS_M_Tier3', 'ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN', 'ROS_V_Tier3 MAN',
+#               'ROS_M_Tier1 MAN', 'ROS_M_Tier2 MAN', 'ROS_M_Tier3 MAN']
+#     cols_2 = ['MerchGroup', 'ST Tier 1', 'ST Tier 2', 'ST Tier 1 MAN', 'ST Tier 2 MAN']
+#
+#
+#     df_kpi1 = df[:-4][cols_1]
+#     df_kpi1 = overwriteKPI(df_kpi1).iloc[:, :int(df_kpi1.shape[1] / 2 + 1)]
+#
+#     df_kpi2 = df[-3:].copy()
+#     df_kpi2 = df_kpi2.dropna(subset=['SKU Class'])
+#     df_kpi2.columns = df_kpi2.iloc[0]
+#     df_kpi2 = df_kpi2[1:]
+#     df_kpi2 = df_kpi2[cols_2]
+#     df_kpi2 = overwriteKPI(df_kpi2).iloc[:, :int(df_kpi2.shape[1] / 2 + 1)]
+#
+#     df_kpi1.rename(columns={'SKU Class': 'Class'}, inplace=True)
+#
+#     return df_kpi1, df_kpi2
 def refreshKPI(df,hier):
     # get KPI from excel file and transfor the dataframes
-    cols_hdl1 = ['SKU Class', 'ROS_V_Tier1', 'ROS_V_Tier2', 'ROS_V_Tier3', 'ROS_M_Tier1', 'ROS_M_Tier2',
-                 'ROS_M_Tier3', 'ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN', 'ROS_V_Tier3 MAN',
+    cols_hdl1 = ['SKU Class', 'ROS_V_Tier1', 'ROS_V_Tier2', 'ROS_V_Tier3',
+                 'ROS_M_Tier1', 'ROS_M_Tier2', 'ROS_M_Tier3',
+                 'ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN', 'ROS_V_Tier3 MAN',
                  'ROS_M_Tier1 MAN', 'ROS_M_Tier2 MAN', 'ROS_M_Tier3 MAN']
     cols_hdl2 = ['MerchGroup', 'ST Tier 1', 'ST Tier 2', 'ST Tier 1 MAN', 'ST Tier 2 MAN']
-    cols_clt1 = ['SKU Class', 'ROS_V_Tier1', 'ROS_V_Tier2', 'ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN']
-    cols_clt2 = ['MerchGroup', 'ST Tier 1', 'ST Tier 2', 'MD Tier 1', 'MD Tier 2',
-                 'ST Tier 1 MAN', 'ST Tier 2 MAN', 'MD Tier 1 MAN', 'MD Tier 2 MAN']
+
+    cols_clt1 = ['SKU Class', 'ROS_V_Tier1', 'ROS_V_Tier2', 'ROS_M_Tier1', 'ROS_M_Tier2',
+                 'ROS_V_Tier1 MAN', 'ROS_V_Tier2 MAN','ROS_M_Tier1 MAN', 'ROS_M_Tier2 MAN']
+    cols_clt2 = ['MerchGroup', 'ST Tier 1', 'ST Tier 2', 'ST Tier 1 MAN', 'ST Tier 2 MAN']
 
     if hier == 2:
         df_kpi1 = df[:-4][cols_hdl1]
